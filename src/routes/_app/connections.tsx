@@ -1,5 +1,5 @@
 import { createFileRoute, useRouter } from '@tanstack/react-router'
-import { Check, Plus } from 'lucide-react'
+import { Plus } from 'lucide-react'
 import { useState } from 'react'
 
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar'
@@ -15,7 +15,7 @@ export const Route = createFileRoute('/_app/connections')({
 function ConnectionsPage() {
   const connections = Route.useLoaderData()
   const router = useRouter()
-  const [disconnecting, setDisconnecting] = useState(false)
+  const [disconnecting, setDisconnecting] = useState<string | null>(null)
 
   const connectYouTube = () =>
     authClient.linkSocial({
@@ -24,71 +24,64 @@ function ConnectionsPage() {
       scopes: ['https://www.googleapis.com/auth/youtube.readonly'],
     })
 
-  const disconnect = async () => {
-    setDisconnecting(true)
+  const disconnect = async (accountId: string) => {
+    setDisconnecting(accountId)
     try {
-      await disconnectYouTube()
+      await disconnectYouTube({ data: { accountId } })
       await router.invalidate()
     } finally {
-      setDisconnecting(false)
+      setDisconnecting(null)
     }
   }
 
   return (
     <main className="flex flex-1 flex-col gap-6 p-6">
       <div className="grid grid-cols-[repeat(auto-fill,10rem)] gap-8">
-        {connections.channel && (
-          <div className="flex w-40 flex-col items-center gap-4 text-center">
-            <Avatar className="size-12">
-              <AvatarImage
-                src={connections.channel.image}
-                alt={connections.channel.name}
-              />
-              <AvatarFallback>
-                {connections.channel.name.slice(0, 1)}
-              </AvatarFallback>
-            </Avatar>
-            <h2 className="w-full truncate font-medium">
-              {connections.channel.name}
-            </h2>
+        {connections.youtubeConnections.map(({ accountId, channel }) => (
+          <div
+            key={accountId}
+            className="flex w-40 flex-col items-center gap-4 text-center"
+          >
+            {channel ? (
+              <>
+                <Avatar className="size-12">
+                  <AvatarImage
+                    src={channel.image ?? undefined}
+                    alt={channel.name}
+                  />
+                  <AvatarFallback>{channel.name.slice(0, 1)}</AvatarFallback>
+                </Avatar>
+                <h2 className="w-full truncate font-medium">{channel.name}</h2>
+              </>
+            ) : (
+              <>
+                <YouTubeLogo />
+                <h2 className="font-medium">YouTube</h2>
+                <p className="text-sm text-muted-foreground">
+                  No channel found
+                </p>
+              </>
+            )}
             <Button
               variant="outline"
-              disabled={disconnecting}
-              onClick={() => void disconnect()}
+              disabled={disconnecting === accountId}
+              onClick={() => void disconnect(accountId)}
             >
               Disconnect
             </Button>
           </div>
-        )}
+        ))}
         <div className="flex w-40 flex-col items-center gap-4 text-center">
           <YouTubeLogo />
           <h2 className="font-medium">YouTube</h2>
-          {connections.channel ? (
-            <Button variant="outline" disabled>
-              <Check />
-              Connected
-            </Button>
-          ) : connections.youtubeConnected ? (
-            <>
-              <p className="text-sm text-muted-foreground">No channel found</p>
-              <Button
-                variant="outline"
-                disabled={disconnecting}
-                onClick={() => void disconnect()}
-              >
-                Disconnect
-              </Button>
-            </>
-          ) : (
-            <Button
-              variant="outline"
-              disabled={!connections.youtubeAvailable}
-              onClick={() => void connectYouTube()}
-            >
-              <Plus />
-              Connect
-            </Button>
-          )}
+          <Button
+            variant="outline"
+            disabled={!connections.youtubeAvailable}
+            onClick={() => void connectYouTube()}
+          >
+            <Plus />
+            Connect
+          </Button>
         </div>
       </div>
     </main>
