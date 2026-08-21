@@ -22,12 +22,6 @@ function ConnectionsPage() {
 
   return (
     <main className="flex flex-1 flex-col gap-6 p-6">
-      <div>
-        <h1 className="text-2xl font-semibold">Connections</h1>
-        <p className="text-sm text-muted-foreground">
-          Connect the accounts Bountiz uses to verify creator content.
-        </p>
-      </div>
       <div className="grid grid-cols-[repeat(auto-fill,10rem)] gap-8">
         <div className="flex w-40 flex-col items-center gap-4 text-center">
           <YouTubeLogo />
