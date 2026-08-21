@@ -78,7 +78,7 @@ function ConnectionsPage() {
               </>
             )}
             <Button
-              variant="outline"
+              variant="destructive"
               disabled={disconnecting === accountId}
               onClick={() => void disconnect(accountId)}
             >
@@ -106,7 +106,7 @@ function YouTubeLogo() {
   return (
     <svg
       aria-hidden="true"
-      className="size-12"
+      className="size-12 text-[#ff0000]"
       viewBox="0 0 24 24"
       fill="currentColor"
     >
