@@ -1,6 +1,8 @@
 import { createFileRoute } from '@tanstack/react-router'
-import { Plus } from 'lucide-react'
+import { Check, Plus } from 'lucide-react'
 
+import { authClient } from '@/lib/auth-client'
+import { getConnections } from '@/lib/auth-functions'
 import { Button } from '@/components/ui/button'
 import {
   Card,
@@ -11,10 +13,20 @@ import {
 } from '@/components/ui/card'
 
 export const Route = createFileRoute('/_app/connections')({
+  loader: () => getConnections(),
   component: ConnectionsPage,
 })
 
 function ConnectionsPage() {
+  const connections = Route.useLoaderData()
+
+  const connectYouTube = () =>
+    authClient.linkSocial({
+      provider: 'google',
+      callbackURL: '/connections',
+      scopes: ['https://www.googleapis.com/auth/youtube.readonly'],
+    })
+
   return (
     <main className="flex flex-1 flex-col gap-6 p-6">
       <div>
@@ -35,10 +47,21 @@ function ConnectionsPage() {
             </CardDescription>
           </CardHeader>
           <CardContent>
-            <Button variant="outline">
-              <Plus />
-              Connect
-            </Button>
+            {connections.youtube ? (
+              <Button variant="outline" disabled>
+                <Check />
+                Connected
+              </Button>
+            ) : (
+              <Button
+                variant="outline"
+                disabled={!connections.youtubeAvailable}
+                onClick={() => void connectYouTube()}
+              >
+                <Plus />
+                Connect
+              </Button>
+            )}
           </CardContent>
         </Card>
       </div>

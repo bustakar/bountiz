@@ -14,3 +14,18 @@ export const requireSession = createServerFn({ method: 'GET' }).handler(
     return session
   },
 )
+
+export const getConnections = createServerFn({ method: 'GET' }).handler(
+  async () => {
+    const accounts = await auth.api.listUserAccounts({
+      headers: getRequestHeaders(),
+    })
+
+    return {
+      youtube: accounts.some((account) => account.providerId === 'google'),
+      youtubeAvailable: Boolean(
+        process.env.GOOGLE_CLIENT_ID && process.env.GOOGLE_CLIENT_SECRET,
+      ),
+    }
+  },
+)
