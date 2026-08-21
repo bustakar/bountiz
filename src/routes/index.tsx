@@ -1,7 +1,18 @@
 import { createFileRoute, redirect } from '@tanstack/react-router'
 
-import { Button } from '@/components/ui/button'
-import { authClient } from '@/lib/auth-client'
+import { AppSidebar } from '@/components/app-sidebar'
+import {
+  Card,
+  CardDescription,
+  CardHeader,
+  CardTitle,
+} from '@/components/ui/card'
+import { Separator } from '@/components/ui/separator'
+import {
+  SidebarInset,
+  SidebarProvider,
+  SidebarTrigger,
+} from '@/components/ui/sidebar'
 import { getSession } from '@/lib/auth-functions'
 
 export const Route = createFileRoute('/')({
@@ -10,33 +21,37 @@ export const Route = createFileRoute('/')({
     if (!session) throw redirect({ to: '/sign-in' })
     return { user: session.user }
   },
-  component: Home,
+  component: CampaignsPage,
 })
 
-function Home() {
+function CampaignsPage() {
   const { user } = Route.useRouteContext()
   return (
-    <main className="flex min-h-svh flex-col items-start gap-4 p-6">
-      <div>
-        <h1 className="text-2xl font-semibold">Bountiz</h1>
-        <p className="text-sm text-muted-foreground">
-          Signed in as {user.email}
-        </p>
-      </div>
-      <Button
-        variant="outline"
-        onClick={() =>
-          void authClient.signOut({
-            fetchOptions: {
-              onSuccess: () => {
-                window.location.href = '/sign-in'
-              },
-            },
-          })
-        }
-      >
-        Log out
-      </Button>
-    </main>
+    <SidebarProvider>
+      <AppSidebar user={user} />
+      <SidebarInset>
+        <header className="flex h-14 shrink-0 items-center gap-2 border-b px-4">
+          <SidebarTrigger className="-ml-1" />
+          <Separator orientation="vertical" className="mr-2 h-4" />
+          <span className="text-sm font-medium">Bountiz</span>
+        </header>
+        <main className="flex flex-1 flex-col gap-6 p-6">
+          <div>
+            <h1 className="text-2xl font-semibold">Campaigns</h1>
+            <p className="text-sm text-muted-foreground">
+              Manage performance-based creator campaigns.
+            </p>
+          </div>
+          <Card>
+            <CardHeader>
+              <CardTitle>No campaigns yet</CardTitle>
+              <CardDescription>
+                Your campaigns will appear here.
+              </CardDescription>
+            </CardHeader>
+          </Card>
+        </main>
+      </SidebarInset>
+    </SidebarProvider>
   )
 }
