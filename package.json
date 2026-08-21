@@ -1,0 +1,51 @@
+{
+  "name": "bountiz",
+  "private": true,
+  "packageManager": "pnpm@11.22.0",
+  "type": "module",
+  "imports": {
+    "#/*": "./src/*"
+  },
+  "scripts": {
+    "dev": "vite dev --port 3000",
+    "generate-routes": "tsr generate",
+    "build": "vite build && pnpm check:server-output",
+    "preview": "vite preview",
+    "lint": "eslint",
+    "format": "prettier --write . && eslint --fix",
+    "typecheck": "tsc --noEmit",
+    "test": "vitest run --passWithNoTests",
+    "check:server-output": "for output_dir in .output/server .vercel/output/functions; do if test -d \"$output_dir\"; then find \"$output_dir\" -type f -name '*.mjs' -exec node --check {} \\;; fi; done",
+    "db:generate": "drizzle-kit generate",
+    "db:migrate": "drizzle-kit migrate",
+    "check": "pnpm generate-routes && prettier --check . && eslint . && pnpm typecheck && pnpm test && pnpm build"
+  },
+  "dependencies": {
+    "@tailwindcss/vite": "^4.1.18",
+    "@tanstack/react-router": "^1.170.30",
+    "@tanstack/react-start": "^1.168.47",
+    "arktype": "^2.1.22",
+    "better-auth": "^1.7.0",
+    "drizzle-orm": "^0.45.2",
+    "nitro": "3.0.260610-beta",
+    "pg": "^8.23.0",
+    "react": "^19.2.0",
+    "react-dom": "^19.2.0",
+    "tailwindcss": "^4.1.18"
+  },
+  "devDependencies": {
+    "@tanstack/eslint-config": "^0.4.0",
+    "@tanstack/router-cli": "^1.167.31",
+    "@types/node": "^26.2.0",
+    "@types/pg": "^8.23.1",
+    "@types/react": "^19.2.0",
+    "@types/react-dom": "^19.2.0",
+    "@vitejs/plugin-react": "^6.0.1",
+    "drizzle-kit": "^0.31.10",
+    "eslint": "^10.8.1",
+    "prettier": "^3.8.1",
+    "typescript": "^6.0.2",
+    "vite": "^8.2.1",
+    "vitest": "^4.1.10"
+  }
+}
