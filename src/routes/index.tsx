@@ -1,21 +1,42 @@
-import { createFileRoute } from '@tanstack/react-router'
+import { createFileRoute, redirect } from '@tanstack/react-router'
 
-export const Route = createFileRoute('/')({ component: Home })
+import { Button } from '@/components/ui/button'
+import { authClient } from '@/lib/auth-client'
+import { getSession } from '@/lib/auth-functions'
+
+export const Route = createFileRoute('/')({
+  beforeLoad: async () => {
+    const session = await getSession()
+    if (!session) throw redirect({ to: '/sign-in' })
+    return { user: session.user }
+  },
+  component: Home,
+})
 
 function Home() {
+  const { user } = Route.useRouteContext()
   return (
-    <main className="grid min-h-screen place-items-center bg-neutral-950 px-6 text-neutral-50">
-      <section className="max-w-xl">
-        <p className="mb-5 text-sm font-medium tracking-[0.18em] text-lime-300 uppercase">
-          Bountiz
+    <main className="flex min-h-svh flex-col items-start gap-4 p-6">
+      <div>
+        <h1 className="text-2xl font-semibold">Bountiz</h1>
+        <p className="text-sm text-muted-foreground">
+          Signed in as {user.email}
         </p>
-        <h1 className="text-5xl leading-tight font-semibold tracking-tight sm:text-7xl">
-          Posts that pay.
-        </h1>
-        <p className="mt-6 max-w-lg text-lg leading-8 text-neutral-400">
-          Agent-first creator campaigns with payouts based on verified reach.
-        </p>
-      </section>
+      </div>
+      <Button
+        variant="outline"
+        onClick={() =>
+          void authClient.signOut({
+            fetchOptions: {
+              onSuccess: () => {
+                window.location.href = '/sign-in'
+              },
+            },
+          })
+        }
+      >
+        Log out
+      </Button>
     </main>
   )
 }
