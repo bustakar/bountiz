@@ -68,6 +68,17 @@ function ConnectionsPage() {
               <Check />
               Connected
             </Button>
+          ) : connections.youtubeConnected ? (
+            <>
+              <p className="text-sm text-muted-foreground">No channel found</p>
+              <Button
+                variant="outline"
+                disabled={disconnecting}
+                onClick={() => void disconnect()}
+              >
+                Disconnect
+              </Button>
+            </>
           ) : (
             <Button
               variant="outline"

@@ -12,7 +12,7 @@ const youtubeChannel = type({
     thumbnails: { default: { url: 'string' } },
   },
 })
-const youtubeChannelsResponse = type({ items: youtubeChannel.array() })
+const youtubeChannelsResponse = type({ 'items?': youtubeChannel.array() })
 
 export const getSession = createServerFn({ method: 'GET' }).handler(async () =>
   auth.api.getSession({ headers: getRequestHeaders() }),
@@ -54,7 +54,7 @@ export const getConnections = createServerFn({ method: 'GET' }).handler(
       if (channels instanceof type.errors)
         throw new Error('YouTube returned an invalid channel')
 
-      const connectedChannel = channels.items.at(0)
+      const connectedChannel = channels.items?.at(0)
       if (connectedChannel)
         channel = {
           id: connectedChannel.id,
@@ -66,6 +66,7 @@ export const getConnections = createServerFn({ method: 'GET' }).handler(
 
     return {
       channel,
+      youtubeConnected: Boolean(youtubeAccount),
       youtubeAvailable: Boolean(
         process.env.GOOGLE_CLIENT_ID && process.env.GOOGLE_CLIENT_SECRET,
       ),
