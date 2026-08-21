@@ -1,8 +1,16 @@
 import { createFileRoute, useRouter } from '@tanstack/react-router'
 import { Plus } from 'lucide-react'
 import { useEffect, useState } from 'react'
-import { toast } from 'sonner'
 
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from '@/components/ui/alert-dialog'
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar'
 import { Button } from '@/components/ui/button'
 import { authClient } from '@/lib/auth-client'
@@ -17,14 +25,12 @@ function ConnectionsPage() {
   const connections = Route.useLoaderData()
   const router = useRouter()
   const [disconnecting, setDisconnecting] = useState<string | null>(null)
+  const [rejectionOpen, setRejectionOpen] = useState(false)
 
   useEffect(() => {
     if (connections.youtubeRejectedAccountIds.length === 0) return
 
-    toast.error('No YouTube channel found', {
-      id: 'youtube-no-channel',
-      description: 'Choose a Google account with a YouTube channel.',
-    })
+    setRejectionOpen(true)
     void Promise.allSettled(
       connections.youtubeRejectedAccountIds.map((accountId) =>
         disconnectYouTube({ data: { accountId } }),
@@ -51,6 +57,19 @@ function ConnectionsPage() {
 
   return (
     <main className="flex flex-1 flex-col gap-6 p-6">
+      <AlertDialog open={rejectionOpen} onOpenChange={setRejectionOpen}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>No YouTube channel found</AlertDialogTitle>
+            <AlertDialogDescription>
+              Choose a Google account with a YouTube channel.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogAction>Okay</AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
       <div className="grid grid-cols-[repeat(auto-fill,10rem)] gap-8">
         {connections.youtubeConnections.map(({ accountId, channel, error }) => (
           <div
