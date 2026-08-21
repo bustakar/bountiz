@@ -4,13 +4,6 @@ import { Check, Plus } from 'lucide-react'
 import { authClient } from '@/lib/auth-client'
 import { getConnections } from '@/lib/auth-functions'
 import { Button } from '@/components/ui/button'
-import {
-  Card,
-  CardContent,
-  CardDescription,
-  CardHeader,
-  CardTitle,
-} from '@/components/ui/card'
 
 export const Route = createFileRoute('/_app/connections')({
   loader: () => getConnections(),
@@ -35,35 +28,26 @@ function ConnectionsPage() {
           Connect the accounts Bountiz uses to verify creator content.
         </p>
       </div>
-      <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
-        <Card>
-          <CardHeader>
-            <div className="flex size-10 items-center justify-center rounded-lg border">
-              <YouTubeLogo />
-            </div>
-            <CardTitle>YouTube</CardTitle>
-            <CardDescription>
-              Verify channel ownership and measure video views.
-            </CardDescription>
-          </CardHeader>
-          <CardContent>
-            {connections.youtube ? (
-              <Button variant="outline" disabled>
-                <Check />
-                Connected
-              </Button>
-            ) : (
-              <Button
-                variant="outline"
-                disabled={!connections.youtubeAvailable}
-                onClick={() => void connectYouTube()}
-              >
-                <Plus />
-                Connect
-              </Button>
-            )}
-          </CardContent>
-        </Card>
+      <div className="grid grid-cols-[repeat(auto-fill,10rem)] gap-8">
+        <div className="flex w-40 flex-col items-center gap-4 text-center">
+          <h2 className="font-medium">YouTube</h2>
+          <YouTubeLogo />
+          {connections.youtube ? (
+            <Button variant="outline" disabled>
+              <Check />
+              Connected
+            </Button>
+          ) : (
+            <Button
+              variant="outline"
+              disabled={!connections.youtubeAvailable}
+              onClick={() => void connectYouTube()}
+            >
+              <Plus />
+              Connect
+            </Button>
+          )}
+        </div>
       </div>
     </main>
   )
@@ -73,7 +57,7 @@ function YouTubeLogo() {
   return (
     <svg
       aria-hidden="true"
-      className="size-5"
+      className="size-12"
       viewBox="0 0 24 24"
       fill="currentColor"
     >
