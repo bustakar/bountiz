@@ -1,8 +1,9 @@
 import { createFileRoute, useRouter } from '@tanstack/react-router'
-import { Plus } from 'lucide-react'
-import { useState } from 'react'
+import { CircleAlert, Plus } from 'lucide-react'
+import { useEffect, useState } from 'react'
 
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar'
+import { Alert, AlertDescription } from '@/components/ui/alert'
 import { Button } from '@/components/ui/button'
 import { authClient } from '@/lib/auth-client'
 import { disconnectYouTube, getConnections } from '@/lib/auth-functions'
@@ -16,6 +17,14 @@ function ConnectionsPage() {
   const connections = Route.useLoaderData()
   const router = useRouter()
   const [disconnecting, setDisconnecting] = useState<string | null>(null)
+
+  useEffect(() => {
+    void Promise.allSettled(
+      connections.youtubeRejectedAccountIds.map((accountId) =>
+        disconnectYouTube({ data: { accountId } }),
+      ),
+    )
+  }, [connections.youtubeRejectedAccountIds])
 
   const connectYouTube = () =>
     authClient.linkSocial({
@@ -36,6 +45,15 @@ function ConnectionsPage() {
 
   return (
     <main className="flex flex-1 flex-col gap-6 p-6">
+      {connections.youtubeRejectedAccountIds.length > 0 && (
+        <Alert className="max-w-xl">
+          <CircleAlert />
+          <AlertDescription>
+            No YouTube channel was found. Choose a Google account with a YouTube
+            channel.
+          </AlertDescription>
+        </Alert>
+      )}
       <div className="grid grid-cols-[repeat(auto-fill,10rem)] gap-8">
         {connections.youtubeConnections.map(({ accountId, channel, error }) => (
           <div

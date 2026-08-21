@@ -56,12 +56,20 @@ export const getConnections = createServerFn({ method: 'GET' }).handler(
         )
         if (!response.ok) {
           const body = await response.text()
+          if (body.includes('youtubeSignupRequired')) {
+            return {
+              accountId: youtubeAccount.id,
+              channel: null,
+              error: null,
+              rejected: true,
+            }
+          }
+
           return {
             accountId: youtubeAccount.id,
             channel: null,
-            error: body.includes('youtubeSignupRequired')
-              ? null
-              : 'Unable to load channel',
+            error: 'Unable to load channel',
+            rejected: false,
           }
         }
 
@@ -70,11 +78,20 @@ export const getConnections = createServerFn({ method: 'GET' }).handler(
           throw new Error('YouTube returned an invalid channel')
 
         const connectedChannel = channels.items?.at(0)
-        const thumbnails = connectedChannel?.snippet.thumbnails
+        if (!connectedChannel) {
+          return {
+            accountId: youtubeAccount.id,
+            channel: null,
+            error: null,
+            rejected: true,
+          }
+        }
+
+        const thumbnails = connectedChannel.snippet.thumbnails
         const thumbnailUrl =
-          thumbnails?.default?.url ??
-          thumbnails?.medium?.url ??
-          thumbnails?.high?.url
+          thumbnails.default?.url ??
+          thumbnails.medium?.url ??
+          thumbnails.high?.url
         const image = thumbnailUrl
           ? await fetchImageDataUrl(thumbnailUrl)
           : null
@@ -82,15 +99,14 @@ export const getConnections = createServerFn({ method: 'GET' }).handler(
         return {
           accountId: youtubeAccount.id,
           error: null,
-          channel: connectedChannel
-            ? {
-                id: connectedChannel.id,
-                name:
-                  connectedChannel.snippet.customUrl ??
-                  connectedChannel.snippet.title,
-                image,
-              }
-            : null,
+          rejected: false,
+          channel: {
+            id: connectedChannel.id,
+            name:
+              connectedChannel.snippet.customUrl ??
+              connectedChannel.snippet.title,
+            image,
+          },
         }
       }),
     )
@@ -101,11 +117,17 @@ export const getConnections = createServerFn({ method: 'GET' }).handler(
             accountId: youtubeAccounts[index].id,
             channel: null,
             error: 'Unable to load channel',
+            rejected: false,
           },
     )
 
     return {
-      youtubeConnections,
+      youtubeConnections: youtubeConnections.filter(
+        (connection) => !connection.rejected,
+      ),
+      youtubeRejectedAccountIds: youtubeConnections
+        .filter((connection) => connection.rejected)
+        .map((connection) => connection.accountId),
       youtubeAvailable: Boolean(
         process.env.GOOGLE_CLIENT_ID && process.env.GOOGLE_CLIENT_SECRET,
       ),
