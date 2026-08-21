@@ -1,6 +1,7 @@
 import * as React from 'react'
-import { CircleDollarSign } from 'lucide-react'
+import { CircleDollarSign, Plug } from 'lucide-react'
 
+import { NavMain } from '@/components/nav-main'
 import { NavUser } from '@/components/nav-user'
 import {
   Sidebar,
@@ -36,7 +37,11 @@ export function AppSidebar({ user, ...props }: AppSidebarProps) {
           </SidebarMenuItem>
         </SidebarMenu>
       </SidebarHeader>
-      <SidebarContent />
+      <SidebarContent>
+        <NavMain
+          items={[{ title: 'Connections', url: '/connections', icon: Plug }]}
+        />
+      </SidebarContent>
       <SidebarFooter>
         <NavUser user={{ ...user, avatar: user.image ?? '' }} />
       </SidebarFooter>
