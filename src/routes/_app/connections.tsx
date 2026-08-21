@@ -1,9 +1,11 @@
-import { createFileRoute } from '@tanstack/react-router'
+import { createFileRoute, useRouter } from '@tanstack/react-router'
 import { Check, Plus } from 'lucide-react'
+import { useState } from 'react'
 
-import { authClient } from '@/lib/auth-client'
-import { getConnections } from '@/lib/auth-functions'
+import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar'
 import { Button } from '@/components/ui/button'
+import { authClient } from '@/lib/auth-client'
+import { disconnectYouTube, getConnections } from '@/lib/auth-functions'
 
 export const Route = createFileRoute('/_app/connections')({
   loader: () => getConnections(),
@@ -12,6 +14,8 @@ export const Route = createFileRoute('/_app/connections')({
 
 function ConnectionsPage() {
   const connections = Route.useLoaderData()
+  const router = useRouter()
+  const [disconnecting, setDisconnecting] = useState(false)
 
   const connectYouTube = () =>
     authClient.linkSocial({
@@ -20,13 +24,46 @@ function ConnectionsPage() {
       scopes: ['https://www.googleapis.com/auth/youtube.readonly'],
     })
 
+  const disconnect = async () => {
+    setDisconnecting(true)
+    try {
+      await disconnectYouTube()
+      await router.invalidate()
+    } finally {
+      setDisconnecting(false)
+    }
+  }
+
   return (
     <main className="flex flex-1 flex-col gap-6 p-6">
       <div className="grid grid-cols-[repeat(auto-fill,10rem)] gap-8">
+        {connections.channel && (
+          <div className="flex w-40 flex-col items-center gap-4 text-center">
+            <Avatar className="size-12">
+              <AvatarImage
+                src={connections.channel.image}
+                alt={connections.channel.name}
+              />
+              <AvatarFallback>
+                {connections.channel.name.slice(0, 1)}
+              </AvatarFallback>
+            </Avatar>
+            <h2 className="w-full truncate font-medium">
+              {connections.channel.name}
+            </h2>
+            <Button
+              variant="outline"
+              disabled={disconnecting}
+              onClick={() => void disconnect()}
+            >
+              Disconnect
+            </Button>
+          </div>
+        )}
         <div className="flex w-40 flex-col items-center gap-4 text-center">
           <YouTubeLogo />
           <h2 className="font-medium">YouTube</h2>
-          {connections.youtube ? (
+          {connections.channel ? (
             <Button variant="outline" disabled>
               <Check />
               Connected
