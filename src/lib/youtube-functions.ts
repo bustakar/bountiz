@@ -146,21 +146,23 @@ export const disconnectYouTube = createServerFn({ method: 'POST' })
     )
     if (!account) return
 
-    const { accessToken } = await auth.api.getAccessToken({
-      body: { accountId: account.id },
-      headers,
-    })
-    await fetch('https://oauth2.googleapis.com/revoke', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
-      body: new URLSearchParams({ token: accessToken }),
-      signal: AbortSignal.timeout(requestTimeoutMs),
-    }).catch(() => null)
-
-    await auth.api.unlinkAccount({
-      body: { accountId: account.id },
-      headers,
-    })
+    try {
+      const { accessToken } = await auth.api.getAccessToken({
+        body: { accountId: account.id },
+        headers,
+      })
+      await fetch('https://oauth2.googleapis.com/revoke', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+        body: new URLSearchParams({ token: accessToken }),
+        signal: AbortSignal.timeout(requestTimeoutMs),
+      }).catch(() => null)
+    } finally {
+      await auth.api.unlinkAccount({
+        body: { accountId: account.id },
+        headers,
+      })
+    }
   })
 
 async function fetchImageDataUrl(url: string) {
