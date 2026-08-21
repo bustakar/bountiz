@@ -44,7 +44,7 @@ export const getConnections = createServerFn({ method: 'GET' }).handler(
         account.scopes.includes(youtubeScope),
     )
 
-    const youtubeConnections = await Promise.all(
+    const connectionAttempts = await Promise.allSettled(
       youtubeAccounts.map(async (youtubeAccount) => {
         const { accessToken } = await auth.api.getAccessToken({
           body: { accountId: youtubeAccount.id },
@@ -54,7 +54,16 @@ export const getConnections = createServerFn({ method: 'GET' }).handler(
           'https://www.googleapis.com/youtube/v3/channels?part=snippet&mine=true',
           { headers: { Authorization: `Bearer ${accessToken}` } },
         )
-        if (!response.ok) throw new Error('Failed to load YouTube channel')
+        if (!response.ok) {
+          const body = await response.text()
+          return {
+            accountId: youtubeAccount.id,
+            channel: null,
+            error: body.includes('youtubeSignupRequired')
+              ? null
+              : 'Unable to load channel',
+          }
+        }
 
         const channels = youtubeChannelsResponse(await response.json())
         if (channels instanceof type.errors)
@@ -72,6 +81,7 @@ export const getConnections = createServerFn({ method: 'GET' }).handler(
 
         return {
           accountId: youtubeAccount.id,
+          error: null,
           channel: connectedChannel
             ? {
                 id: connectedChannel.id,
@@ -84,6 +94,15 @@ export const getConnections = createServerFn({ method: 'GET' }).handler(
         }
       }),
     )
+    const youtubeConnections = connectionAttempts.map((attempt, index) =>
+      attempt.status === 'fulfilled'
+        ? attempt.value
+        : {
+            accountId: youtubeAccounts[index].id,
+            channel: null,
+            error: 'Unable to load channel',
+          },
+    )
 
     return {
       youtubeConnections,
@@ -95,7 +114,7 @@ export const getConnections = createServerFn({ method: 'GET' }).handler(
 )
 
 export const disconnectYouTube = createServerFn({ method: 'POST' })
-  .inputValidator(disconnectYouTubeInput)
+  .validator(disconnectYouTubeInput)
   .handler(async ({ data }) => {
     const headers = getRequestHeaders()
     const accounts = await auth.api.listUserAccounts({ headers })

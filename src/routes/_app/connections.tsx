@@ -37,7 +37,7 @@ function ConnectionsPage() {
   return (
     <main className="flex flex-1 flex-col gap-6 p-6">
       <div className="grid grid-cols-[repeat(auto-fill,10rem)] gap-8">
-        {connections.youtubeConnections.map(({ accountId, channel }) => (
+        {connections.youtubeConnections.map(({ accountId, channel, error }) => (
           <div
             key={accountId}
             className="flex w-40 flex-col items-center gap-4 text-center"
@@ -58,7 +58,7 @@ function ConnectionsPage() {
                 <YouTubeLogo />
                 <h2 className="font-medium">YouTube</h2>
                 <p className="text-sm text-muted-foreground">
-                  No channel found
+                  {error ?? 'No channel found'}
                 </p>
               </>
             )}
