@@ -166,10 +166,14 @@ export const disconnectYouTube = createServerFn({ method: 'POST' })
   })
 
 async function fetchImageDataUrl(url: string) {
-  const response = await fetch(url)
-  const contentType = response.headers.get('content-type')
-  if (!response.ok || !contentType?.startsWith('image/')) return null
+  try {
+    const response = await fetch(url)
+    const contentType = response.headers.get('content-type')
+    if (!response.ok || !contentType?.startsWith('image/')) return null
 
-  const image = Buffer.from(await response.arrayBuffer()).toString('base64')
-  return `data:${contentType};base64,${image}`
+    const image = Buffer.from(await response.arrayBuffer()).toString('base64')
+    return `data:${contentType};base64,${image}`
+  } catch {
+    return null
+  }
 }
