@@ -18,9 +18,13 @@ const youtubeChannel = type({
   },
 })
 const youtubeChannelsResponse = type({ 'items?': youtubeChannel.array() })
+const youtubeErrorResponse = type({
+  error: { errors: type({ reason: 'string' }).array() },
+})
 const disconnectYouTubeInput = type({ accountId: 'string' })
+const requestTimeoutMs = 5_000
 
-export const getConnections = createServerFn({ method: 'GET' }).handler(
+export const getYouTubeConnections = createServerFn({ method: 'GET' }).handler(
   async () => {
     const headers = getRequestHeaders()
     const accounts = await auth.api.listUserAccounts({ headers })
@@ -38,11 +42,19 @@ export const getConnections = createServerFn({ method: 'GET' }).handler(
         })
         const response = await fetch(
           'https://www.googleapis.com/youtube/v3/channels?part=snippet&mine=true',
-          { headers: { Authorization: `Bearer ${accessToken}` } },
+          {
+            headers: { Authorization: `Bearer ${accessToken}` },
+            signal: AbortSignal.timeout(requestTimeoutMs),
+          },
         )
         if (!response.ok) {
-          const body = await response.text()
-          if (body.includes('youtubeSignupRequired')) {
+          const error = youtubeErrorResponse(await response.json())
+          if (
+            !(error instanceof type.errors) &&
+            error.error.errors.some(
+              ({ reason }) => reason === 'youtubeSignupRequired',
+            )
+          ) {
             return {
               accountId: youtubeAccount.id,
               channel: null,
@@ -138,12 +150,12 @@ export const disconnectYouTube = createServerFn({ method: 'POST' })
       body: { accountId: account.id },
       headers,
     })
-    const response = await fetch('https://oauth2.googleapis.com/revoke', {
+    await fetch('https://oauth2.googleapis.com/revoke', {
       method: 'POST',
       headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
       body: new URLSearchParams({ token: accessToken }),
-    })
-    if (!response.ok) throw new Error('Failed to revoke YouTube access')
+      signal: AbortSignal.timeout(requestTimeoutMs),
+    }).catch(() => null)
 
     await auth.api.unlinkAccount({
       body: { accountId: account.id },
@@ -153,7 +165,9 @@ export const disconnectYouTube = createServerFn({ method: 'POST' })
 
 async function fetchImageDataUrl(url: string) {
   try {
-    const response = await fetch(url)
+    const response = await fetch(url, {
+      signal: AbortSignal.timeout(requestTimeoutMs),
+    })
     const contentType = response.headers.get('content-type')
     if (!response.ok || !contentType?.startsWith('image/')) return null
 

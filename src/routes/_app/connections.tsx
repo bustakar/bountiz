@@ -14,10 +14,13 @@ import {
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar'
 import { Button } from '@/components/ui/button'
 import { authClient } from '@/lib/auth-client'
-import { disconnectYouTube, getConnections } from '@/lib/youtube-functions'
+import {
+  disconnectYouTube,
+  getYouTubeConnections,
+} from '@/lib/youtube-functions'
 
 export const Route = createFileRoute('/_app/connections')({
-  loader: () => getConnections(),
+  loader: () => getYouTubeConnections(),
   component: ConnectionsPage,
 })
 
