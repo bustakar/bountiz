@@ -1,4 +1,9 @@
-import { Outlet, createFileRoute, redirect } from '@tanstack/react-router'
+import {
+  Outlet,
+  createFileRoute,
+  redirect,
+  useRouterState,
+} from '@tanstack/react-router'
 
 import { AppSidebar } from '@/components/app-sidebar'
 import { Separator } from '@/components/ui/separator'
@@ -20,6 +25,11 @@ export const Route = createFileRoute('/_app')({
 
 function AppLayout() {
   const { user } = Route.useRouteContext()
+  const pathname = useRouterState({
+    select: (state) => state.location.pathname,
+  })
+  const section = pathname === '/connections' ? 'Connections' : 'Campaigns'
+
   return (
     <SidebarProvider>
       <AppSidebar user={user} />
@@ -27,7 +37,7 @@ function AppLayout() {
         <header className="flex h-14 shrink-0 items-center gap-2 border-b px-4">
           <SidebarTrigger className="-ml-1" />
           <Separator orientation="vertical" className="mr-2 h-4" />
-          <span className="text-sm font-medium">Bountiz</span>
+          <span className="text-sm font-medium">{section}</span>
         </header>
         <Outlet />
       </SidebarInset>

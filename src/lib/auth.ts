@@ -12,5 +12,25 @@ export const auth = betterAuth({
   secret: env.BETTER_AUTH_SECRET,
   database: drizzleAdapter(db, { provider: 'pg', schema }),
   emailAndPassword: { enabled: true },
+  account: {
+    encryptOAuthTokens: true,
+    accountLinking: {
+      enabled: true,
+      disableImplicitLinking: true,
+      trustedProviders: ['google'],
+      allowDifferentEmails: true,
+    },
+  },
+  socialProviders:
+    env.GOOGLE_CLIENT_ID && env.GOOGLE_CLIENT_SECRET
+      ? {
+          google: {
+            clientId: env.GOOGLE_CLIENT_ID,
+            clientSecret: env.GOOGLE_CLIENT_SECRET,
+            accessType: 'offline',
+            prompt: 'select_account consent',
+          },
+        }
+      : {},
   plugins: [tanstackStartCookies()],
 })

@@ -1,46 +1,124 @@
-import { createFileRoute } from '@tanstack/react-router'
+import { createFileRoute, useRouter } from '@tanstack/react-router'
 import { Plus } from 'lucide-react'
+import { useEffect, useState } from 'react'
 
-import { Button } from '@/components/ui/button'
 import {
-  Card,
-  CardContent,
-  CardDescription,
-  CardHeader,
-  CardTitle,
-} from '@/components/ui/card'
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from '@/components/ui/alert-dialog'
+import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar'
+import { Button } from '@/components/ui/button'
+import { authClient } from '@/lib/auth-client'
+import {
+  disconnectYouTube,
+  getYouTubeConnections,
+} from '@/lib/youtube-functions'
 
 export const Route = createFileRoute('/_app/connections')({
+  loader: () => getYouTubeConnections(),
   component: ConnectionsPage,
 })
 
 function ConnectionsPage() {
+  const connections = Route.useLoaderData()
+  const router = useRouter()
+  const [disconnecting, setDisconnecting] = useState<string | null>(null)
+  const [rejectionOpen, setRejectionOpen] = useState(false)
+
+  useEffect(() => {
+    if (connections.youtubeRejectedAccountIds.length === 0) return
+
+    setRejectionOpen(true)
+    void Promise.allSettled(
+      connections.youtubeRejectedAccountIds.map((accountId) =>
+        disconnectYouTube({ data: { accountId } }),
+      ),
+    )
+  }, [connections.youtubeRejectedAccountIds])
+
+  const connectYouTube = () =>
+    authClient.linkSocial({
+      provider: 'google',
+      callbackURL: '/connections',
+      scopes: ['https://www.googleapis.com/auth/youtube.readonly'],
+    })
+
+  const disconnect = async (accountId: string) => {
+    setDisconnecting(accountId)
+    try {
+      await disconnectYouTube({ data: { accountId } })
+      await router.invalidate()
+    } finally {
+      setDisconnecting(null)
+    }
+  }
+
   return (
     <main className="flex flex-1 flex-col gap-6 p-6">
-      <div>
-        <h1 className="text-2xl font-semibold">Connections</h1>
-        <p className="text-sm text-muted-foreground">
-          Connect the accounts Bountiz uses to verify creator content.
-        </p>
-      </div>
-      <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
-        <Card>
-          <CardHeader>
-            <div className="flex size-10 items-center justify-center rounded-lg border">
-              <YouTubeLogo />
-            </div>
-            <CardTitle>YouTube</CardTitle>
-            <CardDescription>
-              Verify channel ownership and measure video views.
-            </CardDescription>
-          </CardHeader>
-          <CardContent>
-            <Button variant="outline">
-              <Plus />
-              Connect
+      <AlertDialog open={rejectionOpen} onOpenChange={setRejectionOpen}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>No YouTube channel found</AlertDialogTitle>
+            <AlertDialogDescription>
+              Choose a Google account with a YouTube channel.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogAction>Okay</AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
+      <div className="grid grid-cols-[repeat(auto-fill,10rem)] gap-8">
+        {connections.youtubeConnections.map(({ accountId, channel, error }) => (
+          <div
+            key={accountId}
+            className="flex w-40 flex-col items-center gap-4 text-center"
+          >
+            {channel ? (
+              <>
+                <Avatar className="size-12">
+                  <AvatarImage
+                    src={channel.image ?? undefined}
+                    alt={channel.name}
+                  />
+                  <AvatarFallback>{channel.name.slice(0, 1)}</AvatarFallback>
+                </Avatar>
+                <h2 className="w-full truncate font-medium">{channel.name}</h2>
+              </>
+            ) : (
+              <>
+                <YouTubeLogo />
+                <h2 className="font-medium">YouTube</h2>
+                <p className="text-sm text-muted-foreground">
+                  {error ?? 'No channel found'}
+                </p>
+              </>
+            )}
+            <Button
+              variant="outline"
+              disabled={disconnecting === accountId}
+              onClick={() => void disconnect(accountId)}
+            >
+              Disconnect
             </Button>
-          </CardContent>
-        </Card>
+          </div>
+        ))}
+        <div className="flex w-40 flex-col items-center gap-4 text-center">
+          <YouTubeLogo />
+          <h2 className="font-medium">YouTube</h2>
+          <Button
+            disabled={!connections.youtubeAvailable}
+            onClick={() => void connectYouTube()}
+          >
+            <Plus />
+            Connect
+          </Button>
+        </div>
       </div>
     </main>
   )
@@ -50,7 +128,7 @@ function YouTubeLogo() {
   return (
     <svg
       aria-hidden="true"
-      className="size-5"
+      className="size-12 text-[#ff0000]"
       viewBox="0 0 24 24"
       fill="currentColor"
     >

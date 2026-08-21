@@ -14,6 +14,8 @@ export const env = {
     'development-secret-change-before-deploying',
   ),
   DATABASE_URL: serverEnv('DATABASE_URL', 'postgres://localhost/bountiz'),
+  GOOGLE_CLIENT_ID: process.env.GOOGLE_CLIENT_ID,
+  GOOGLE_CLIENT_SECRET: process.env.GOOGLE_CLIENT_SECRET,
 }
 
 if (isVercel && env.BETTER_AUTH_SECRET.length < 32)
