@@ -22,7 +22,13 @@ export const getConnections = createServerFn({ method: 'GET' }).handler(
     })
 
     return {
-      youtube: accounts.some((account) => account.providerId === 'google'),
+      youtube: accounts.some(
+        (account) =>
+          account.providerId === 'google' &&
+          account.scopes.includes(
+            'https://www.googleapis.com/auth/youtube.readonly',
+          ),
+      ),
       youtubeAvailable: Boolean(
         process.env.GOOGLE_CLIENT_ID && process.env.GOOGLE_CLIENT_SECRET,
       ),
