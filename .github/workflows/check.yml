@@ -56,7 +56,7 @@ jobs:
       - name: Deploy Development
         id: deploy
         run: |
-          deployment_url=$(pnpm exec vercel deploy --archive=tgz --target=preview --token="$VERCEL_TOKEN")
+          deployment_url=$(pnpm exec vercel deploy --archive=tgz --token="$VERCEL_TOKEN")
           echo "url=$deployment_url" >> "$GITHUB_OUTPUT"
         env:
           VERCEL_TOKEN: ${{ secrets.VERCEL_TOKEN }}
