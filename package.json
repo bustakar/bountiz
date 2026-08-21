@@ -16,7 +16,7 @@
     "typecheck": "tsc --noEmit",
     "test": "vitest run --passWithNoTests",
     "check:server-output": "for output_dir in .output/server .vercel/output/functions; do if test -d \"$output_dir\"; then find \"$output_dir\" -type f -name '*.mjs' -exec node --check {} \\;; fi; done",
-    "db:generate": "drizzle-kit generate",
+    "db:generate": "auth generate --config src/lib/auth.ts --output src/lib/auth-schema.ts --yes && prettier --write src/lib/auth-schema.ts && drizzle-kit generate && prettier --write drizzle/meta",
     "db:migrate": "drizzle-kit migrate",
     "check": "pnpm generate-routes && prettier --check . && eslint . && pnpm typecheck && pnpm test && pnpm build"
   },
@@ -41,7 +41,9 @@
     "@types/react": "^19.2.0",
     "@types/react-dom": "^19.2.0",
     "@vitejs/plugin-react": "^6.0.1",
+    "auth": "^1.7.0",
     "drizzle-kit": "^0.31.10",
+    "dotenv": "^17.4.2",
     "eslint": "^10.8.1",
     "prettier": "^3.8.1",
     "typescript": "^6.0.2",
