@@ -78,7 +78,7 @@ function ConnectionsPage() {
               </>
             )}
             <Button
-              variant="destructive"
+              variant="outline"
               disabled={disconnecting === accountId}
               onClick={() => void disconnect(accountId)}
             >
