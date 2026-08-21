@@ -30,8 +30,8 @@ function ConnectionsPage() {
       </div>
       <div className="grid grid-cols-[repeat(auto-fill,10rem)] gap-8">
         <div className="flex w-40 flex-col items-center gap-4 text-center">
-          <h2 className="font-medium">YouTube</h2>
           <YouTubeLogo />
+          <h2 className="font-medium">YouTube</h2>
           {connections.youtube ? (
             <Button variant="outline" disabled>
               <Check />
