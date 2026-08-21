@@ -36,13 +36,18 @@ function SignInPage() {
     event.preventDefault()
     setPending(true)
     setError(null)
-    const result = register
-      ? await authClient.signUp.email({ name, email, password })
-      : await authClient.signIn.email({ email, password })
-    setPending(false)
-    if (result.error)
-      return setError(result.error.message ?? 'Authentication failed')
-    await navigate({ to: '/' })
+    try {
+      const result = register
+        ? await authClient.signUp.email({ name, email, password })
+        : await authClient.signIn.email({ email, password })
+      if (result.error)
+        return setError(result.error.message ?? 'Authentication failed')
+      await navigate({ to: '/' })
+    } catch {
+      setError('Unable to reach Bountiz. Please try again.')
+    } finally {
+      setPending(false)
+    }
   }
 
   return (
