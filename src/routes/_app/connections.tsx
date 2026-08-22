@@ -36,21 +36,25 @@ function ConnectionsPage() {
   const connections = Route.useLoaderData()
   const router = useRouter()
   const [disconnecting, setDisconnecting] = useState<string | null>(null)
-  const [rejectedProvider, setRejectedProvider] = useState<
-    'YouTube' | 'TikTok' | null
-  >(null)
+  const [rejectedProviders, setRejectedProviders] = useState<
+    ('YouTube' | 'TikTok')[]
+  >([])
+  const rejectedProvider = rejectedProviders[0]
 
   useEffect(() => {
+    const providers: ('YouTube' | 'TikTok')[] = []
     if (connections.youtubeRejectedAccountIds.length > 0) {
-      setRejectedProvider('YouTube')
+      providers.push('YouTube')
       void Promise.allSettled(
         connections.youtubeRejectedAccountIds.map((accountId) =>
           disconnectYouTube({ data: { accountId } }),
         ),
       )
-    } else if (connections.tiktokRejectedAccountIds.length > 0) {
-      setRejectedProvider('TikTok')
     }
+    if (connections.tiktokRejectedAccountIds.length > 0) {
+      providers.push('TikTok')
+    }
+    setRejectedProviders(providers)
   }, [
     connections.tiktokRejectedAccountIds,
     connections.youtubeRejectedAccountIds,
@@ -86,8 +90,10 @@ function ConnectionsPage() {
   return (
     <main className="flex flex-1 flex-col gap-6 p-6">
       <AlertDialog
-        open={rejectedProvider !== null}
-        onOpenChange={(open) => !open && setRejectedProvider(null)}
+        open={rejectedProviders.length > 0}
+        onOpenChange={(open) =>
+          !open && setRejectedProviders(([, ...remaining]) => remaining)
+        }
       >
         <AlertDialogContent>
           <AlertDialogHeader>
