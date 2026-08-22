@@ -14,13 +14,20 @@ import {
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar'
 import { Button } from '@/components/ui/button'
 import { authClient } from '@/lib/auth-client'
+import { disconnectTikTok, getTikTokConnections } from '@/lib/tiktok-functions'
 import {
   disconnectYouTube,
   getYouTubeConnections,
 } from '@/lib/youtube-functions'
 
 export const Route = createFileRoute('/_app/connections')({
-  loader: () => getYouTubeConnections(),
+  loader: async () => {
+    const [youtube, tiktok] = await Promise.all([
+      getYouTubeConnections(),
+      getTikTokConnections(),
+    ])
+    return { ...youtube, ...tiktok }
+  },
   component: ConnectionsPage,
 })
 
@@ -28,18 +35,24 @@ function ConnectionsPage() {
   const connections = Route.useLoaderData()
   const router = useRouter()
   const [disconnecting, setDisconnecting] = useState<string | null>(null)
-  const [rejectionOpen, setRejectionOpen] = useState(false)
+  const [youtubeRejectionOpen, setYouTubeRejectionOpen] = useState(false)
+  const [tiktokRejectionOpen, setTikTokRejectionOpen] = useState(false)
 
   useEffect(() => {
     if (connections.youtubeRejectedAccountIds.length === 0) return
 
-    setRejectionOpen(true)
+    setYouTubeRejectionOpen(true)
     void Promise.allSettled(
       connections.youtubeRejectedAccountIds.map((accountId) =>
         disconnectYouTube({ data: { accountId } }),
       ),
     )
   }, [connections.youtubeRejectedAccountIds])
+
+  useEffect(() => {
+    if (connections.tiktokRejectedAccountIds.length === 0) return
+    setTikTokRejectionOpen(true)
+  }, [connections.tiktokRejectedAccountIds])
 
   const connectYouTube = () =>
     authClient.linkSocial({
@@ -48,10 +61,20 @@ function ConnectionsPage() {
       scopes: ['https://www.googleapis.com/auth/youtube.readonly'],
     })
 
-  const disconnect = async (accountId: string) => {
+  const connectTikTok = () =>
+    authClient.linkSocial({
+      provider: 'tiktok',
+      callbackURL: '/connections',
+      scopes: ['user.info.basic', 'video.list'],
+    })
+
+  const disconnect = async (
+    accountId: string,
+    disconnectAccount: typeof disconnectYouTube | typeof disconnectTikTok,
+  ) => {
     setDisconnecting(accountId)
     try {
-      await disconnectYouTube({ data: { accountId } })
+      await disconnectAccount({ data: { accountId } })
       await router.invalidate()
     } finally {
       setDisconnecting(null)
@@ -60,7 +83,10 @@ function ConnectionsPage() {
 
   return (
     <main className="flex flex-1 flex-col gap-6 p-6">
-      <AlertDialog open={rejectionOpen} onOpenChange={setRejectionOpen}>
+      <AlertDialog
+        open={youtubeRejectionOpen}
+        onOpenChange={setYouTubeRejectionOpen}
+      >
         <AlertDialogContent>
           <AlertDialogHeader>
             <AlertDialogTitle>No YouTube channel found</AlertDialogTitle>
@@ -70,6 +96,21 @@ function ConnectionsPage() {
           </AlertDialogHeader>
           <AlertDialogFooter>
             <AlertDialogAction>Okay</AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
+      <AlertDialog open={tiktokRejectionOpen}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>No TikTok profile found</AlertDialogTitle>
+            <AlertDialogDescription>
+              Choose a TikTok account with a valid profile.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogAction onClick={() => setTikTokRejectionOpen(false)}>
+              Okay
+            </AlertDialogAction>
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>
@@ -102,7 +143,7 @@ function ConnectionsPage() {
             <Button
               variant="outline"
               disabled={disconnecting === accountId}
-              onClick={() => void disconnect(accountId)}
+              onClick={() => void disconnect(accountId, disconnectYouTube)}
             >
               Disconnect
             </Button>
@@ -119,8 +160,70 @@ function ConnectionsPage() {
             Connect
           </Button>
         </div>
+        {connections.tiktokConnections.map(({ accountId, profile }) => (
+          <div
+            key={accountId}
+            className="flex w-40 flex-col items-center gap-4 text-center"
+          >
+            {profile ? (
+              <>
+                <Avatar className="size-12">
+                  <AvatarImage
+                    src={profile.image ?? undefined}
+                    alt={`@${profile.username}`}
+                  />
+                  <AvatarFallback>
+                    {profile.username.slice(0, 1).toUpperCase()}
+                  </AvatarFallback>
+                </Avatar>
+                <h2 className="w-full truncate font-medium">
+                  @{profile.username}
+                </h2>
+              </>
+            ) : (
+              <>
+                <TikTokLogo />
+                <h2 className="font-medium">TikTok</h2>
+                <p className="text-sm text-muted-foreground">
+                  Unable to load profile
+                </p>
+              </>
+            )}
+            <Button
+              variant="outline"
+              disabled={disconnecting === accountId}
+              onClick={() => void disconnect(accountId, disconnectTikTok)}
+            >
+              Disconnect
+            </Button>
+          </div>
+        ))}
+        <div className="flex w-40 flex-col items-center gap-4 text-center">
+          <TikTokLogo />
+          <h2 className="font-medium">TikTok</h2>
+          <Button
+            disabled={!connections.tiktokAvailable}
+            onClick={() => void connectTikTok()}
+          >
+            <Plus />
+            Connect
+          </Button>
+        </div>
       </div>
     </main>
+  )
+}
+
+const tiktokLogoPath =
+  'M12.53 0c.41 3.47 2.35 5.54 5.73 5.76v3.9c-1.96.19-3.68-.45-5.67-1.65v7.29c0 9.27-10.1 12.16-14.16 5.52-2.61-4.27-1.01-11.75 7.36-12.05v4.12c-.64.1-1.32.25-1.94.46-1.86.63-2.91 1.8-2.62 3.86.56 3.94 7.79 5.11 7.19-2.59V.08L12.53 0Z'
+
+function TikTokLogo() {
+  return (
+    <svg aria-hidden="true" className="size-12" viewBox="-3 -1 30 27">
+      <path d={tiktokLogoPath} fill="#25f4ee" transform="translate(-1 1)" />
+      <path d={tiktokLogoPath} fill="#fe2c55" transform="translate(1 0)" />
+      <path d={tiktokLogoPath} className="fill-foreground" />
+    </svg>
   )
 }
 
