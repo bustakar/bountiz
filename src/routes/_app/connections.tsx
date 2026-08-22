@@ -1,6 +1,7 @@
 import { createFileRoute, useRouter } from '@tanstack/react-router'
 import { Plus } from 'lucide-react'
 import { useEffect, useState } from 'react'
+import type { ReactNode } from 'react'
 
 import {
   AlertDialog,
@@ -35,24 +36,25 @@ function ConnectionsPage() {
   const connections = Route.useLoaderData()
   const router = useRouter()
   const [disconnecting, setDisconnecting] = useState<string | null>(null)
-  const [youtubeRejectionOpen, setYouTubeRejectionOpen] = useState(false)
-  const [tiktokRejectionOpen, setTikTokRejectionOpen] = useState(false)
+  const [rejectedProvider, setRejectedProvider] = useState<
+    'YouTube' | 'TikTok' | null
+  >(null)
 
   useEffect(() => {
-    if (connections.youtubeRejectedAccountIds.length === 0) return
-
-    setYouTubeRejectionOpen(true)
-    void Promise.allSettled(
-      connections.youtubeRejectedAccountIds.map((accountId) =>
-        disconnectYouTube({ data: { accountId } }),
-      ),
-    )
-  }, [connections.youtubeRejectedAccountIds])
-
-  useEffect(() => {
-    if (connections.tiktokRejectedAccountIds.length === 0) return
-    setTikTokRejectionOpen(true)
-  }, [connections.tiktokRejectedAccountIds])
+    if (connections.youtubeRejectedAccountIds.length > 0) {
+      setRejectedProvider('YouTube')
+      void Promise.allSettled(
+        connections.youtubeRejectedAccountIds.map((accountId) =>
+          disconnectYouTube({ data: { accountId } }),
+        ),
+      )
+    } else if (connections.tiktokRejectedAccountIds.length > 0) {
+      setRejectedProvider('TikTok')
+    }
+  }, [
+    connections.tiktokRejectedAccountIds,
+    connections.youtubeRejectedAccountIds,
+  ])
 
   const connectYouTube = () =>
     authClient.linkSocial({
@@ -84,33 +86,28 @@ function ConnectionsPage() {
   return (
     <main className="flex flex-1 flex-col gap-6 p-6">
       <AlertDialog
-        open={youtubeRejectionOpen}
-        onOpenChange={setYouTubeRejectionOpen}
+        open={rejectedProvider !== null}
+        onOpenChange={(open) => !open && setRejectedProvider(null)}
       >
         <AlertDialogContent>
           <AlertDialogHeader>
-            <AlertDialogTitle>No YouTube channel found</AlertDialogTitle>
+            <AlertDialogTitle>
+              No{' '}
+              {rejectedProvider === 'YouTube'
+                ? 'YouTube channel'
+                : 'TikTok profile'}{' '}
+              found
+            </AlertDialogTitle>
             <AlertDialogDescription>
-              Choose a Google account with a YouTube channel.
+              Choose a{' '}
+              {rejectedProvider === 'YouTube'
+                ? 'Google account with a YouTube channel'
+                : 'TikTok account with a valid profile'}
+              .
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>
             <AlertDialogAction>Okay</AlertDialogAction>
-          </AlertDialogFooter>
-        </AlertDialogContent>
-      </AlertDialog>
-      <AlertDialog open={tiktokRejectionOpen}>
-        <AlertDialogContent>
-          <AlertDialogHeader>
-            <AlertDialogTitle>No TikTok profile found</AlertDialogTitle>
-            <AlertDialogDescription>
-              Choose a TikTok account with a valid profile.
-            </AlertDialogDescription>
-          </AlertDialogHeader>
-          <AlertDialogFooter>
-            <AlertDialogAction onClick={() => setTikTokRejectionOpen(false)}>
-              Okay
-            </AlertDialogAction>
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>
@@ -149,17 +146,12 @@ function ConnectionsPage() {
             </Button>
           </div>
         ))}
-        <div className="flex w-40 flex-col items-center gap-4 text-center">
-          <YouTubeLogo />
-          <h2 className="font-medium">YouTube</h2>
-          <Button
-            disabled={!connections.youtubeAvailable}
-            onClick={() => void connectYouTube()}
-          >
-            <Plus />
-            Connect
-          </Button>
-        </div>
+        <ConnectTile
+          name="YouTube"
+          logo={<YouTubeLogo />}
+          disabled={!connections.youtubeAvailable}
+          onConnect={connectYouTube}
+        />
         {connections.tiktokConnections.map(({ accountId, profile }) => (
           <div
             key={accountId}
@@ -198,19 +190,37 @@ function ConnectionsPage() {
             </Button>
           </div>
         ))}
-        <div className="flex w-40 flex-col items-center gap-4 text-center">
-          <TikTokLogo />
-          <h2 className="font-medium">TikTok</h2>
-          <Button
-            disabled={!connections.tiktokAvailable}
-            onClick={() => void connectTikTok()}
-          >
-            <Plus />
-            Connect
-          </Button>
-        </div>
+        <ConnectTile
+          name="TikTok"
+          logo={<TikTokLogo />}
+          disabled={!connections.tiktokAvailable}
+          onConnect={connectTikTok}
+        />
       </div>
     </main>
+  )
+}
+
+function ConnectTile({
+  name,
+  logo,
+  disabled,
+  onConnect,
+}: {
+  name: string
+  logo: ReactNode
+  disabled: boolean
+  onConnect: () => unknown
+}) {
+  return (
+    <div className="flex w-40 flex-col items-center gap-4 text-center">
+      {logo}
+      <h2 className="font-medium">{name}</h2>
+      <Button disabled={disabled} onClick={() => void onConnect()}>
+        <Plus />
+        Connect
+      </Button>
+    </div>
   )
 }
 
