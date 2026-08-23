@@ -49,6 +49,7 @@ const instagramTokenUrl = 'https://api.instagram.com/oauth/access_token'
 const instagramLongTokenUrl = 'https://graph.instagram.com/access_token'
 const instagramRefreshTokenUrl =
   'https://graph.instagram.com/refresh_access_token'
+const instagramPermissionsUrl = 'https://graph.instagram.com/me/permissions'
 const instagramProfileUrl =
   'https://graph.instagram.com/me?fields=id,user_id,username,name,account_type,profile_picture_url'
 
@@ -121,10 +122,7 @@ export const getInstagramConnections = createServerFn({
   const connectionAttempts = await Promise.allSettled(
     instagramAccounts.map(async (account) => {
       if (!account.scopes.includes(instagramBasicScope)) {
-        await auth.api.unlinkAccount({
-          body: { accountId: account.id },
-          headers,
-        })
+        await unlinkInstagramAccount(account.id, headers)
         return { accountId: account.id, profile: null, rejected: true }
       }
 
@@ -134,10 +132,7 @@ export const getInstagramConnections = createServerFn({
       })
       const result = await fetchInstagramProfile(accessToken)
       if (result.status === 'invalid') {
-        await auth.api.unlinkAccount({
-          body: { accountId: account.id },
-          headers,
-        })
+        await unlinkInstagramAccount(account.id, headers, accessToken)
         return { accountId: account.id, profile: null, rejected: true }
       }
       if (result.status === 'error')
@@ -191,8 +186,39 @@ export const disconnectInstagram = createServerFn({ method: 'POST' })
     )
     if (!account) return
 
-    await auth.api.unlinkAccount({ body: { accountId: account.id }, headers })
+    await unlinkInstagramAccount(account.id, headers)
   })
+
+async function unlinkInstagramAccount(
+  accountId: string,
+  headers: Headers,
+  knownAccessToken?: string,
+) {
+  const { auth } = await import('@/lib/auth')
+  try {
+    const accessToken =
+      knownAccessToken ??
+      (
+        await auth.api.getAccessToken({
+          body: { accountId },
+          headers,
+        })
+      ).accessToken
+    await revokeInstagramPermissions(accessToken)
+  } catch {
+    // Revocation is best-effort; the local connection must still be removed.
+  } finally {
+    await auth.api.unlinkAccount({ body: { accountId }, headers })
+  }
+}
+
+export async function revokeInstagramPermissions(accessToken: string) {
+  await fetch(instagramPermissionsUrl, {
+    method: 'DELETE',
+    headers: { Authorization: `Bearer ${accessToken}` },
+    signal: AbortSignal.timeout(requestTimeoutMs),
+  })
+}
 
 async function exchangeInstagramCode(
   credentials: InstagramCredentials,

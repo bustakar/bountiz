@@ -3,6 +3,7 @@ import { afterEach, describe, expect, it, vi } from 'vitest'
 import {
   createInstagramProvider,
   instagramBasicScope,
+  revokeInstagramPermissions,
 } from '@/lib/instagram-functions'
 
 const credentials = { appId: 'app-id', appSecret: 'app-secret' }
@@ -134,6 +135,24 @@ describe('Instagram OAuth provider', () => {
         href: expect.stringContaining('access_token=old-token'),
       }),
       expect.objectContaining({ signal: expect.any(AbortSignal) }),
+    )
+  })
+
+  it('revokes Instagram permissions through the Graph API', async () => {
+    vi.stubGlobal(
+      'fetch',
+      vi.fn<typeof fetch>().mockResolvedValueOnce(new Response(null)),
+    )
+
+    await revokeInstagramPermissions('long-token')
+
+    expect(fetch).toHaveBeenCalledWith(
+      'https://graph.instagram.com/me/permissions',
+      expect.objectContaining({
+        method: 'DELETE',
+        headers: { Authorization: 'Bearer long-token' },
+        signal: expect.any(AbortSignal),
+      }),
     )
   })
 })
