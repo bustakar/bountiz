@@ -46,7 +46,7 @@
     "@types/pg": "^8.23.1",
     "@types/react": "^19.2.0",
     "@types/react-dom": "^19.2.0",
-    "@vitejs/plugin-react": "^6.0.1",
+    "@vitejs/plugin-react": "^5.1.4",
     "auth": "^1.7.0",
     "dotenv": "^17.4.2",
     "drizzle-kit": "^0.31.10",
@@ -54,7 +54,7 @@
     "prettier": "^3.8.1",
     "typescript": "^6.0.2",
     "vercel": "59.1.4",
-    "vite": "^8.2.1",
+    "vite": "^7.3.6",
     "vitest": "^4.1.10"
   }
 }
