@@ -5,7 +5,7 @@ import { tanstackStartCookies } from 'better-auth/tanstack-start'
 import * as schema from '@/lib/auth-schema'
 import { db } from '@/lib/database'
 import { env } from '@/lib/env'
-import { getTikTokOAuthUserInfo } from '@/lib/tiktok-functions'
+import { tiktokAuthPlugin } from '@/lib/tiktok-functions'
 
 export const auth = betterAuth({
   appName: 'Bountiz',
@@ -33,15 +33,16 @@ export const auth = betterAuth({
           },
         }
       : {}),
+  },
+  plugins: [
     ...(env.TIKTOK_CLIENT_KEY && env.TIKTOK_CLIENT_SECRET
-      ? {
-          tiktok: {
+      ? [
+          tiktokAuthPlugin({
             clientKey: env.TIKTOK_CLIENT_KEY,
             clientSecret: env.TIKTOK_CLIENT_SECRET,
-            getUserInfo: getTikTokOAuthUserInfo,
-          },
-        }
-      : {}),
-  },
-  plugins: [tanstackStartCookies()],
+          }),
+        ]
+      : []),
+    tanstackStartCookies(),
+  ],
 })
