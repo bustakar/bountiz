@@ -120,6 +120,12 @@ async function exchangeTikTokToken(
   const result: unknown = await response.json()
   const token = tiktokTokenResponse(result)
   if (token instanceof type.errors) {
+    const providerError = tiktokRevokeErrorResponse(result)
+    if (!(providerError instanceof type.errors)) {
+      throw new Error(
+        `TikTok token exchange failed: ${providerError.error}: ${providerError.error_description}`,
+      )
+    }
     throw new Error('TikTok returned an invalid token response')
   }
 
