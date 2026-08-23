@@ -16,6 +16,11 @@ import {
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar'
 import { Button } from '@/components/ui/button'
 import { authClient } from '@/lib/auth-client'
+import {
+  disconnectInstagram,
+  getInstagramConnections,
+  instagramBasicScope,
+} from '@/lib/instagram-functions'
 import { disconnectTikTok, getTikTokConnections } from '@/lib/tiktok-functions'
 import {
   disconnectYouTube,
@@ -23,15 +28,35 @@ import {
 } from '@/lib/youtube-functions'
 
 const connectionsSearch = type({ 'error?': 'string' })
+type ProviderName = 'Instagram' | 'TikTok' | 'YouTube'
+
+const rejectedConnectionCopy: Record<
+  ProviderName,
+  { account: string; instruction: string }
+> = {
+  Instagram: {
+    account: 'Instagram professional account',
+    instruction: 'Choose a valid Instagram Business or Creator account.',
+  },
+  TikTok: {
+    account: 'TikTok profile',
+    instruction: 'Choose a TikTok account with a valid profile.',
+  },
+  YouTube: {
+    account: 'YouTube channel',
+    instruction: 'Choose a Google account with a YouTube channel.',
+  },
+}
 
 export const Route = createFileRoute('/_app/connections')({
   validateSearch: connectionsSearch,
   loader: async () => {
-    const [youtube, tiktok] = await Promise.all([
+    const [youtube, tiktok, instagram] = await Promise.all([
       getYouTubeConnections(),
       getTikTokConnections(),
+      getInstagramConnections(),
     ])
-    return { ...youtube, ...tiktok }
+    return { ...youtube, ...tiktok, ...instagram }
   },
   component: ConnectionsPage,
 })
@@ -41,14 +66,15 @@ function ConnectionsPage() {
   const { error } = Route.useSearch()
   const router = useRouter()
   const [disconnecting, setDisconnecting] = useState<string | null>(null)
-  const [rejectedProviders, setRejectedProviders] = useState<
-    ('YouTube' | 'TikTok')[]
-  >([])
-  const rejectedProvider = rejectedProviders[0]
+  const [rejectedProviders, setRejectedProviders] = useState<ProviderName[]>([])
+  const rejectedProvider = rejectedProviders.at(0)
+  const rejectedCopy = rejectedProvider
+    ? rejectedConnectionCopy[rejectedProvider]
+    : null
   const oauthError = error ? getOAuthErrorMessage(error) : null
 
   useEffect(() => {
-    const providers: ('YouTube' | 'TikTok')[] = []
+    const providers: ProviderName[] = []
     if (connections.youtubeRejectedAccountIds.length > 0) {
       providers.push('YouTube')
       void Promise.allSettled(
@@ -60,8 +86,12 @@ function ConnectionsPage() {
     if (connections.tiktokRejectedAccountIds.length > 0) {
       providers.push('TikTok')
     }
+    if (connections.instagramRejectedAccountIds.length > 0) {
+      providers.push('Instagram')
+    }
     setRejectedProviders(providers)
   }, [
+    connections.instagramRejectedAccountIds,
     connections.tiktokRejectedAccountIds,
     connections.youtubeRejectedAccountIds,
   ])
@@ -82,9 +112,20 @@ function ConnectionsPage() {
       scopes: ['user.info.basic', 'video.list'],
     })
 
+  const connectInstagram = () =>
+    authClient.linkSocial({
+      provider: 'instagram',
+      callbackURL: '/connections',
+      errorCallbackURL: '/connections',
+      scopes: [instagramBasicScope],
+    })
+
   const disconnect = async (
     accountId: string,
-    disconnectAccount: typeof disconnectYouTube | typeof disconnectTikTok,
+    disconnectAccount:
+      | typeof disconnectInstagram
+      | typeof disconnectTikTok
+      | typeof disconnectYouTube,
   ) => {
     setDisconnecting(accountId)
     try {
@@ -112,19 +153,12 @@ function ConnectionsPage() {
           <AlertDialogHeader>
             <AlertDialogTitle>
               {oauthError?.title ??
-                `No ${
-                  rejectedProvider === 'YouTube'
-                    ? 'YouTube channel'
-                    : 'TikTok profile'
-                } found`}
+                `No ${rejectedCopy?.account ?? 'social account'} found`}
             </AlertDialogTitle>
             <AlertDialogDescription>
               {oauthError?.description ??
-                `Choose a ${
-                  rejectedProvider === 'YouTube'
-                    ? 'Google account with a YouTube channel'
-                    : 'TikTok account with a valid profile'
-                }.`}
+                rejectedCopy?.instruction ??
+                'Choose a valid social account.'}
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>
@@ -221,6 +255,50 @@ function ConnectionsPage() {
           disabled={!connections.tiktokAvailable}
           onConnect={connectTikTok}
         />
+        {connections.instagramConnections.map(({ accountId, profile }) => (
+          <div
+            key={accountId}
+            className="flex w-40 flex-col items-center gap-4 text-center"
+          >
+            {profile ? (
+              <>
+                <Avatar className="size-12">
+                  <AvatarImage
+                    src={profile.image ?? undefined}
+                    alt={`@${profile.username}`}
+                  />
+                  <AvatarFallback>
+                    {profile.username.slice(0, 1).toUpperCase()}
+                  </AvatarFallback>
+                </Avatar>
+                <h2 className="w-full truncate font-medium">
+                  @{profile.username}
+                </h2>
+              </>
+            ) : (
+              <>
+                <InstagramLogo />
+                <h2 className="font-medium">Instagram</h2>
+                <p className="text-sm text-muted-foreground">
+                  Unable to load profile
+                </p>
+              </>
+            )}
+            <Button
+              variant="outline"
+              disabled={disconnecting === accountId}
+              onClick={() => void disconnect(accountId, disconnectInstagram)}
+            >
+              Disconnect
+            </Button>
+          </div>
+        ))}
+        <ConnectTile
+          name="Instagram"
+          logo={<InstagramLogo />}
+          disabled={!connections.instagramAvailable}
+          onConnect={connectInstagram}
+        />
       </div>
     </main>
   )
@@ -236,9 +314,9 @@ function getOAuthErrorMessage(error: string) {
   }
   if (error === 'invalid_code') {
     return {
-      title: 'TikTok connection failed',
+      title: 'Connection failed',
       description:
-        "We couldn't complete TikTok authorization. Please try connecting TikTok again.",
+        "We couldn't complete authorization. Please try connecting the account again.",
     }
   }
   return {
@@ -267,6 +345,23 @@ function ConnectTile({
         Connect
       </Button>
     </div>
+  )
+}
+
+function InstagramLogo() {
+  return (
+    <svg
+      aria-hidden="true"
+      className="size-12 text-[#e4405f]"
+      viewBox="0 0 24 24"
+      fill="none"
+      stroke="currentColor"
+      strokeWidth="1.75"
+    >
+      <rect x="3" y="3" width="18" height="18" rx="5" />
+      <circle cx="12" cy="12" r="4" />
+      <circle cx="17.5" cy="6.5" r="1" fill="currentColor" stroke="none" />
+    </svg>
   )
 }
 

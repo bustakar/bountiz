@@ -33,10 +33,11 @@ function TermsPage() {
           </Section>
           <Section title="Connected services">
             <p>
-              Bountiz may connect to third-party services such as YouTube and
-              TikTok at your direction. Those services are governed by their own
-              terms. You authorize us to access and process the data needed to
-              provide the features you request until you disconnect them.
+              Bountiz may connect to third-party services such as YouTube,
+              TikTok, and Instagram at your direction. Those services are
+              governed by their own terms. You authorize us to access and
+              process the data needed to provide the features you request until
+              you disconnect them.
             </p>
           </Section>
           <Section title="Your content">

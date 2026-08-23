@@ -5,6 +5,7 @@ import { tanstackStartCookies } from 'better-auth/tanstack-start'
 import * as schema from '@/lib/auth-schema'
 import { db } from '@/lib/database'
 import { env } from '@/lib/env'
+import { instagramAuthPlugin } from '@/lib/instagram-functions'
 import { tiktokAuthPlugin } from '@/lib/tiktok-functions'
 
 export const auth = betterAuth({
@@ -18,7 +19,7 @@ export const auth = betterAuth({
     accountLinking: {
       enabled: true,
       disableImplicitLinking: true,
-      trustedProviders: ['google', 'tiktok'],
+      trustedProviders: ['google', 'instagram', 'tiktok'],
       allowDifferentEmails: true,
     },
   },
@@ -35,6 +36,14 @@ export const auth = betterAuth({
       : {}),
   },
   plugins: [
+    ...(env.INSTAGRAM_APP_ID && env.INSTAGRAM_APP_SECRET
+      ? [
+          instagramAuthPlugin({
+            appId: env.INSTAGRAM_APP_ID,
+            appSecret: env.INSTAGRAM_APP_SECRET,
+          }),
+        ]
+      : []),
     ...(env.TIKTOK_CLIENT_KEY && env.TIKTOK_CLIENT_SECRET
       ? [
           tiktokAuthPlugin({

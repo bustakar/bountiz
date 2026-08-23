@@ -14,10 +14,10 @@ function PrivacyPage() {
       <Section title="Information we collect">
         <p>
           We collect account information you provide, such as your name and
-          email address. When you connect a third-party service such as YouTube
-          or TikTok, we receive the account identity, profile details, and data
-          you authorize that service to share. We also collect basic technical
-          information needed to operate and secure the service.
+          email address. When you connect a third-party service such as YouTube,
+          TikTok, or Instagram, we receive the account identity, profile
+          details, and data you authorize that service to share. We also collect
+          basic technical information needed to operate and secure the service.
         </p>
       </Section>
       <Section title="How we use information">
