@@ -1,4 +1,5 @@
 import { createFileRoute, useRouter } from '@tanstack/react-router'
+import { type } from 'arktype'
 import { Plus } from 'lucide-react'
 import { useEffect, useState } from 'react'
 import type { ReactNode } from 'react'
@@ -21,7 +22,10 @@ import {
   getYouTubeConnections,
 } from '@/lib/youtube-functions'
 
+const connectionsSearch = type({ 'error?': 'string' })
+
 export const Route = createFileRoute('/_app/connections')({
+  validateSearch: connectionsSearch,
   loader: async () => {
     const [youtube, tiktok] = await Promise.all([
       getYouTubeConnections(),
@@ -34,12 +38,14 @@ export const Route = createFileRoute('/_app/connections')({
 
 function ConnectionsPage() {
   const connections = Route.useLoaderData()
+  const { error } = Route.useSearch()
   const router = useRouter()
   const [disconnecting, setDisconnecting] = useState<string | null>(null)
   const [rejectedProviders, setRejectedProviders] = useState<
     ('YouTube' | 'TikTok')[]
   >([])
   const rejectedProvider = rejectedProviders[0]
+  const oauthError = error ? getOAuthErrorMessage(error) : null
 
   useEffect(() => {
     const providers: ('YouTube' | 'TikTok')[] = []
@@ -64,6 +70,7 @@ function ConnectionsPage() {
     authClient.linkSocial({
       provider: 'google',
       callbackURL: '/connections',
+      errorCallbackURL: '/connections',
       scopes: ['https://www.googleapis.com/auth/youtube.readonly'],
     })
 
@@ -71,6 +78,7 @@ function ConnectionsPage() {
     authClient.linkSocial({
       provider: 'tiktok',
       callbackURL: '/connections',
+      errorCallbackURL: '/connections',
       scopes: ['user.info.basic', 'video.list'],
     })
 
@@ -90,26 +98,33 @@ function ConnectionsPage() {
   return (
     <main className="flex flex-1 flex-col gap-6 p-6">
       <AlertDialog
-        open={rejectedProviders.length > 0}
-        onOpenChange={(open) =>
-          !open && setRejectedProviders(([, ...remaining]) => remaining)
-        }
+        open={oauthError !== null || rejectedProviders.length > 0}
+        onOpenChange={(open) => {
+          if (open) return
+          if (oauthError) {
+            void router.navigate({ to: '/connections', replace: true })
+          } else {
+            setRejectedProviders(([, ...remaining]) => remaining)
+          }
+        }}
       >
         <AlertDialogContent>
           <AlertDialogHeader>
             <AlertDialogTitle>
-              No{' '}
-              {rejectedProvider === 'YouTube'
-                ? 'YouTube channel'
-                : 'TikTok profile'}{' '}
-              found
+              {oauthError?.title ??
+                `No ${
+                  rejectedProvider === 'YouTube'
+                    ? 'YouTube channel'
+                    : 'TikTok profile'
+                } found`}
             </AlertDialogTitle>
             <AlertDialogDescription>
-              Choose a{' '}
-              {rejectedProvider === 'YouTube'
-                ? 'Google account with a YouTube channel'
-                : 'TikTok account with a valid profile'}
-              .
+              {oauthError?.description ??
+                `Choose a ${
+                  rejectedProvider === 'YouTube'
+                    ? 'Google account with a YouTube channel'
+                    : 'TikTok account with a valid profile'
+                }.`}
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>
@@ -118,40 +133,44 @@ function ConnectionsPage() {
         </AlertDialogContent>
       </AlertDialog>
       <div className="grid grid-cols-[repeat(auto-fill,10rem)] gap-8">
-        {connections.youtubeConnections.map(({ accountId, channel, error }) => (
-          <div
-            key={accountId}
-            className="flex w-40 flex-col items-center gap-4 text-center"
-          >
-            {channel ? (
-              <>
-                <Avatar className="size-12">
-                  <AvatarImage
-                    src={channel.image ?? undefined}
-                    alt={channel.name}
-                  />
-                  <AvatarFallback>{channel.name.slice(0, 1)}</AvatarFallback>
-                </Avatar>
-                <h2 className="w-full truncate font-medium">{channel.name}</h2>
-              </>
-            ) : (
-              <>
-                <YouTubeLogo />
-                <h2 className="font-medium">YouTube</h2>
-                <p className="text-sm text-muted-foreground">
-                  {error ?? 'No channel found'}
-                </p>
-              </>
-            )}
-            <Button
-              variant="outline"
-              disabled={disconnecting === accountId}
-              onClick={() => void disconnect(accountId, disconnectYouTube)}
+        {connections.youtubeConnections.map(
+          ({ accountId, channel, error: connectionError }) => (
+            <div
+              key={accountId}
+              className="flex w-40 flex-col items-center gap-4 text-center"
             >
-              Disconnect
-            </Button>
-          </div>
-        ))}
+              {channel ? (
+                <>
+                  <Avatar className="size-12">
+                    <AvatarImage
+                      src={channel.image ?? undefined}
+                      alt={channel.name}
+                    />
+                    <AvatarFallback>{channel.name.slice(0, 1)}</AvatarFallback>
+                  </Avatar>
+                  <h2 className="w-full truncate font-medium">
+                    {channel.name}
+                  </h2>
+                </>
+              ) : (
+                <>
+                  <YouTubeLogo />
+                  <h2 className="font-medium">YouTube</h2>
+                  <p className="text-sm text-muted-foreground">
+                    {connectionError ?? 'No channel found'}
+                  </p>
+                </>
+              )}
+              <Button
+                variant="outline"
+                disabled={disconnecting === accountId}
+                onClick={() => void disconnect(accountId, disconnectYouTube)}
+              >
+                Disconnect
+              </Button>
+            </div>
+          ),
+        )}
         <ConnectTile
           name="YouTube"
           logo={<YouTubeLogo />}
@@ -205,6 +224,27 @@ function ConnectionsPage() {
       </div>
     </main>
   )
+}
+
+function getOAuthErrorMessage(error: string) {
+  if (error === 'account_already_linked_to_different_user') {
+    return {
+      title: 'Account already connected',
+      description:
+        'This social account is connected to another Bountiz user. Disconnect it there or sign in to that Bountiz account.',
+    }
+  }
+  if (error === 'invalid_code') {
+    return {
+      title: 'TikTok connection failed',
+      description:
+        "We couldn't complete TikTok authorization. Please try connecting TikTok again.",
+    }
+  }
+  return {
+    title: 'Connection failed',
+    description: 'We could not connect that account. Please try again.',
+  }
 }
 
 function ConnectTile({

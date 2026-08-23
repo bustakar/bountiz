@@ -1,6 +1,8 @@
 import { type } from 'arktype'
 import { createServerFn } from '@tanstack/react-start'
 import { getRequestHeaders } from '@tanstack/react-start/server'
+import { tiktok } from 'better-auth/social-providers'
+import type { BetterAuthPlugin } from 'better-auth'
 import type { TiktokProfile } from 'better-auth/social-providers'
 
 const tiktokUser = type({
@@ -28,10 +30,60 @@ const tiktokRevokeErrorResponse = type({
   'log_id?': 'string',
 })
 const emptyResponse = type('undefined')
+const tiktokTokenResponse = type({
+  access_token: 'string > 0',
+  expires_in: 'number > 0',
+  open_id: 'string > 0',
+  refresh_expires_in: 'number > 0',
+  refresh_token: 'string > 0',
+  scope: 'string',
+  token_type: 'string > 0',
+})
 const disconnectTikTokInput = type({ accountId: 'string' })
 const requestTimeoutMs = 5_000
 const tiktokUserInfoUrl =
   'https://open.tiktokapis.com/v2/user/info/?fields=open_id,username,display_name,avatar_large_url'
+const tiktokTokenUrl = 'https://open.tiktokapis.com/v2/oauth/token/'
+
+export function tiktokAuthPlugin(credentials: {
+  clientKey: string
+  clientSecret: string
+}) {
+  const provider = tiktok({
+    ...credentials,
+    getUserInfo: getTikTokOAuthUserInfo,
+  })
+  const validateAuthorizationCode: typeof provider.validateAuthorizationCode =
+    ({ code, redirectURI }) =>
+      exchangeTikTokToken(credentials, {
+        code,
+        grant_type: 'authorization_code',
+        redirect_uri: redirectURI,
+      })
+  const refreshAccessToken: typeof provider.refreshAccessToken = (
+    refreshToken,
+  ) =>
+    exchangeTikTokToken(credentials, {
+      grant_type: 'refresh_token',
+      refresh_token: refreshToken,
+    })
+
+  return {
+    id: 'bountiz-tiktok',
+    init: (context) => ({
+      context: {
+        socialProviders: [
+          {
+            ...provider,
+            validateAuthorizationCode,
+            refreshAccessToken,
+          },
+          ...context.socialProviders,
+        ],
+      },
+    }),
+  } satisfies BetterAuthPlugin
+}
 
 export async function getTikTokOAuthUserInfo(token: { accessToken?: string }) {
   if (!token.accessToken) return null
@@ -48,6 +100,38 @@ export async function getTikTokOAuthUserInfo(token: { accessToken?: string }) {
       emailVerified: false,
     },
     data: profile,
+  }
+}
+
+async function exchangeTikTokToken(
+  credentials: { clientKey: string; clientSecret: string },
+  parameters: Record<string, string>,
+) {
+  const response = await fetch(tiktokTokenUrl, {
+    method: 'POST',
+    headers: { 'content-type': 'application/x-www-form-urlencoded' },
+    body: new URLSearchParams({
+      client_key: credentials.clientKey,
+      client_secret: credentials.clientSecret,
+      ...parameters,
+    }),
+    signal: AbortSignal.timeout(requestTimeoutMs),
+  })
+  const result: unknown = await response.json()
+  const token = tiktokTokenResponse(result)
+  if (token instanceof type.errors) {
+    throw new Error('TikTok returned an invalid token response')
+  }
+
+  const now = Date.now()
+  return {
+    accessToken: token.access_token,
+    refreshToken: token.refresh_token,
+    tokenType: token.token_type,
+    scopes: token.scope ? token.scope.split(',') : [],
+    accessTokenExpiresAt: new Date(now + token.expires_in * 1_000),
+    refreshTokenExpiresAt: new Date(now + token.refresh_expires_in * 1_000),
+    raw: token,
   }
 }
 
