@@ -29,6 +29,13 @@
       "when": 1787573104355,
       "tag": "0003_misty_human_cannonball",
       "breakpoints": true
+    },
+    {
+      "idx": 4,
+      "version": "7",
+      "when": 1787574743647,
+      "tag": "0004_open_fenris",
+      "breakpoints": true
     }
   ]
 }

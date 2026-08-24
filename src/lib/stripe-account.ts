@@ -26,7 +26,7 @@ export async function refreshStripeAccount(where: SQL) {
   )
   const snapshot = getStripeAccountSnapshot(account)
 
-  await db
+  const persisted = await db
     .update(stripeConnectedAccount)
     .set(snapshot)
     .where(
@@ -38,6 +38,28 @@ export async function refreshStripeAccount(where: SQL) {
         ),
       ),
     )
+    .returning({ userId: stripeConnectedAccount.userId })
+
+  if (persisted.length === 0) {
+    const winner = await db.query.stripeConnectedAccount.findFirst({
+      where: eq(
+        stripeConnectedAccount.stripeAccountId,
+        connection.stripeAccountId,
+      ),
+    })
+    if (!winner) return null
+
+    return {
+      account,
+      snapshot: {
+        detailsSubmitted: winner.detailsSubmitted,
+        payoutsEnabled: winner.payoutsEnabled,
+        transfersStatus: winner.transfersStatus,
+        requirementsDue: winner.requirementsDue,
+        disabledReason: winner.disabledReason,
+      },
+    }
+  }
 
   return { account, snapshot }
 }

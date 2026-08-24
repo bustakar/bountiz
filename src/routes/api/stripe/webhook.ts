@@ -1,4 +1,4 @@
-import { eq } from 'drizzle-orm'
+import { and, eq, isNull, lte, or } from 'drizzle-orm'
 import { createFileRoute } from '@tanstack/react-router'
 
 import { db } from '@/lib/database'
@@ -28,12 +28,36 @@ async function handleStripeWebhook({ request }: { request: Request }) {
     return new Response('Invalid Stripe signature', { status: 400 })
   }
 
-  const inserted = await db
+  const processingToken = crypto.randomUUID()
+  const now = new Date()
+  const processingExpiresAt = new Date(now.getTime() + 5 * 60 * 1000)
+  const claimed = await db
     .insert(stripeWebhookEvent)
-    .values({ id: event.id, type: event.type })
-    .onConflictDoNothing()
+    .values({
+      id: event.id,
+      type: event.type,
+      processingToken,
+      processingExpiresAt,
+    })
+    .onConflictDoUpdate({
+      target: stripeWebhookEvent.id,
+      set: { processingToken, processingExpiresAt },
+      setWhere: and(
+        isNull(stripeWebhookEvent.processedAt),
+        or(
+          isNull(stripeWebhookEvent.processingExpiresAt),
+          lte(stripeWebhookEvent.processingExpiresAt, now),
+        ),
+      ),
+    })
     .returning({ id: stripeWebhookEvent.id })
-  if (inserted.length === 0) return Response.json({ received: true })
+  if (claimed.length === 0) {
+    const existing = await db.query.stripeWebhookEvent.findFirst({
+      where: eq(stripeWebhookEvent.id, event.id),
+    })
+    if (existing?.processedAt) return Response.json({ received: true })
+    return new Response('Webhook processing in progress', { status: 409 })
+  }
 
   try {
     if (event.type === 'account.updated') {
@@ -44,9 +68,24 @@ async function handleStripeWebhook({ request }: { request: Request }) {
   } catch (error) {
     await db
       .delete(stripeWebhookEvent)
-      .where(eq(stripeWebhookEvent.id, event.id))
+      .where(
+        and(
+          eq(stripeWebhookEvent.id, event.id),
+          eq(stripeWebhookEvent.processingToken, processingToken),
+        ),
+      )
     throw error
   }
+
+  await db
+    .update(stripeWebhookEvent)
+    .set({ processedAt: new Date() })
+    .where(
+      and(
+        eq(stripeWebhookEvent.id, event.id),
+        eq(stripeWebhookEvent.processingToken, processingToken),
+      ),
+    )
 
   return Response.json({ received: true })
 }

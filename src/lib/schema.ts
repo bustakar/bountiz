@@ -46,5 +46,7 @@ export const stripeConnectedAccount = pgTable(
 export const stripeWebhookEvent = pgTable('stripe_webhook_event', {
   id: text('id').primaryKey(),
   type: text('type').notNull(),
-  processedAt: timestamp('processed_at').defaultNow().notNull(),
+  processingToken: text('processing_token'),
+  processingExpiresAt: timestamp('processing_expires_at'),
+  processedAt: timestamp('processed_at'),
 })
