@@ -20,6 +20,7 @@ export function StripePayoutButton({ stripe }: { stripe: StripeConnection }) {
   if (dashboard) {
     return (
       <Button
+        disabled={!stripe.available}
         variant="outline"
         onClick={() => window.location.assign('/api/stripe/dashboard')}
       >
@@ -32,7 +33,7 @@ export function StripePayoutButton({ stripe }: { stripe: StripeConnection }) {
     <form method="post" action="/api/stripe/onboard">
       <Button
         type="submit"
-        disabled={!stripe.available || status === 'unavailable'}
+        disabled={!stripe.available}
         variant={stripe.connection ? 'outline' : 'default'}
       >
         {action}

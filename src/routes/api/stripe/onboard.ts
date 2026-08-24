@@ -57,7 +57,7 @@ async function onboardCreator({ request }: { request: Request }) {
         fields: 'eventually_due',
         future_requirements: 'include',
       },
-      refresh_url: new URL('/api/stripe/onboard', env.APP_URL).toString(),
+      refresh_url: new URL('/?stripe=refresh', env.APP_URL).toString(),
       return_url: new URL('/?stripe=return', env.APP_URL).toString(),
     })
     return Response.redirect(link.url, 303)

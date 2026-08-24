@@ -1,4 +1,4 @@
-import { eq } from 'drizzle-orm'
+import { and, eq, isNull, lte, or } from 'drizzle-orm'
 import { createFileRoute } from '@tanstack/react-router'
 
 import { db } from '@/lib/database'
@@ -27,6 +27,20 @@ async function handleStripeWebhook({ request }: { request: Request }) {
     return new Response('Invalid Stripe signature', { status: 400 })
   }
 
+  const connection =
+    event.type === 'account.updated'
+      ? await db.query.stripeConnectedAccount.findFirst({
+          columns: { stripeAccountId: true },
+          where: eq(
+            stripeConnectedAccount.stripeAccountId,
+            event.data.object.id,
+          ),
+        })
+      : undefined
+  const account = connection
+    ? await getStripe().accounts.retrieve(connection.stripeAccountId)
+    : undefined
+
   await db.transaction(async (transaction) => {
     const inserted = await transaction
       .insert(stripeWebhookEvent)
@@ -35,28 +49,20 @@ async function handleStripeWebhook({ request }: { request: Request }) {
       .returning({ id: stripeWebhookEvent.id })
     if (inserted.length === 0) return
 
-    if (event.type === 'account.updated') {
-      const connection = (
-        await transaction
-          .select({ stripeAccountId: stripeConnectedAccount.stripeAccountId })
-          .from(stripeConnectedAccount)
-          .where(
-            eq(stripeConnectedAccount.stripeAccountId, event.data.object.id),
-          )
-          .for('update')
-      ).at(0)
-      if (!connection) return
-
-      const account = await getStripe().accounts.retrieve(
-        connection.stripeAccountId,
-      )
+    if (account) {
       await transaction
         .update(stripeConnectedAccount)
-        .set(getStripeAccountSnapshot(account))
+        .set({
+          ...getStripeAccountSnapshot(account),
+          lastWebhookCreatedAt: event.created,
+        })
         .where(
-          eq(
-            stripeConnectedAccount.stripeAccountId,
-            connection.stripeAccountId,
+          and(
+            eq(stripeConnectedAccount.stripeAccountId, account.id),
+            or(
+              isNull(stripeConnectedAccount.lastWebhookCreatedAt),
+              lte(stripeConnectedAccount.lastWebhookCreatedAt, event.created),
+            ),
           ),
         )
     }

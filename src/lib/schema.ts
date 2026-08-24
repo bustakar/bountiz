@@ -1,4 +1,5 @@
 import {
+  bigint,
   boolean,
   jsonb,
   pgTable,
@@ -24,6 +25,9 @@ export const stripeConnectedAccount = pgTable(
       .default([])
       .notNull(),
     disabledReason: text('disabled_reason'),
+    lastWebhookCreatedAt: bigint('last_webhook_created_at', {
+      mode: 'number',
+    }),
     createdAt: timestamp('created_at').defaultNow().notNull(),
     updatedAt: timestamp('updated_at')
       .defaultNow()
