@@ -5,12 +5,8 @@ import { getRequestHeaders } from '@tanstack/react-start/server'
 import { auth } from '@/lib/auth'
 import { db } from '@/lib/database'
 import { stripeConnectedAccount } from '@/lib/schema'
-import {
-  getStripe,
-  getStripeAccountSnapshot,
-  getStripePayoutStatus,
-  isStripeConfigured,
-} from '@/lib/stripe'
+import { refreshStripeAccount } from '@/lib/stripe-account'
+import { getStripePayoutStatus, isStripeConfigured } from '@/lib/stripe'
 
 export const getStripeConnection = createServerFn({ method: 'GET' }).handler(
   async () => {
@@ -33,14 +29,10 @@ export const getStripeConnection = createServerFn({ method: 'GET' }).handler(
 
     if (available) {
       try {
-        const account = await getStripe().accounts.retrieve(
-          connection.stripeAccountId,
+        const refreshed = await refreshStripeAccount(
+          eq(stripeConnectedAccount.userId, session.user.id),
         )
-        snapshot = getStripeAccountSnapshot(account)
-        await db
-          .update(stripeConnectedAccount)
-          .set(snapshot)
-          .where(eq(stripeConnectedAccount.userId, session.user.id))
+        if (refreshed) snapshot = refreshed
       } catch {
         return {
           available,
