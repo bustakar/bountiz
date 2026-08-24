@@ -95,7 +95,10 @@ function CampaignsPage() {
             <Card key={campaign.id}>
               <CardHeader>
                 <div className="flex items-start justify-between gap-4">
-                  <CardTitle>{campaign.name}</CardTitle>
+                  <div className="flex items-center gap-2">
+                    <CardTitle>{campaign.name}</CardTitle>
+                    <CampaignStatusBadge status={campaign.status} />
+                  </div>
                   <span className="text-sm font-medium whitespace-nowrap">
                     {formatCampaignBudget(campaign.budgetAmount)}
                   </span>
@@ -130,6 +133,25 @@ function CampaignsPage() {
         </div>
       )}
     </main>
+  )
+}
+
+function CampaignStatusBadge({
+  status,
+}: {
+  status: 'pending_payment' | 'funded'
+}) {
+  const funded = status === 'funded'
+  return (
+    <span
+      className={
+        funded
+          ? 'shrink-0 rounded-full bg-emerald-100 px-2 py-0.5 text-xs font-medium whitespace-nowrap text-emerald-700 dark:bg-emerald-950 dark:text-emerald-300'
+          : 'shrink-0 rounded-full bg-amber-100 px-2 py-0.5 text-xs font-medium whitespace-nowrap text-amber-700 dark:bg-amber-950 dark:text-amber-300'
+      }
+    >
+      {funded ? 'Funded' : 'Payment pending'}
+    </span>
   )
 }
 
