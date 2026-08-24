@@ -32,7 +32,7 @@ export const getStripeConnection = createServerFn({ method: 'GET' }).handler(
         const refreshed = await refreshStripeAccount(
           eq(stripeConnectedAccount.userId, session.user.id),
         )
-        if (refreshed) snapshot = refreshed
+        if (refreshed) snapshot = refreshed.snapshot
       } catch {
         return {
           available,

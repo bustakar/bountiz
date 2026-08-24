@@ -6,6 +6,7 @@ import { auth } from '@/lib/auth'
 import { db } from '@/lib/database'
 import { env } from '@/lib/env'
 import { stripeConnectedAccount } from '@/lib/schema'
+import { refreshStripeAccount } from '@/lib/stripe-account'
 import {
   getStripe,
   getStripeAccountSnapshot,
@@ -30,25 +31,28 @@ async function onboardCreator({ request }: { request: Request }) {
     const existing = await db.query.stripeConnectedAccount.findFirst({
       where: eq(stripeConnectedAccount.userId, session.user.id),
     })
-    const account = await getOrCreateStripeAccount(stripe, existing, {
+    const prepared = await getOrCreateStripeAccount(stripe, existing, {
       id: session.user.id,
       email: session.user.email,
     })
+    const account = prepared.account
 
-    await db
-      .insert(stripeConnectedAccount)
-      .values({
-        userId: session.user.id,
-        stripeAccountId: account.id,
-        ...getStripeAccountSnapshot(account),
-      })
-      .onConflictDoUpdate({
-        target: stripeConnectedAccount.userId,
-        set: {
+    if (prepared.needsPersist) {
+      await db
+        .insert(stripeConnectedAccount)
+        .values({
+          userId: session.user.id,
           stripeAccountId: account.id,
           ...getStripeAccountSnapshot(account),
-        },
-      })
+        })
+        .onConflictDoUpdate({
+          target: stripeConnectedAccount.userId,
+          set: {
+            stripeAccountId: account.id,
+            ...getStripeAccountSnapshot(account),
+          },
+        })
+    }
 
     const link = await stripe.accountLinks.create({
       account: account.id,
@@ -73,13 +77,18 @@ async function getOrCreateStripeAccount(
 ) {
   if (existing) {
     try {
-      return await stripe.accounts.retrieve(existing.stripeAccountId)
+      const refreshed = await refreshStripeAccount(
+        eq(stripeConnectedAccount.userId, user.id),
+      )
+      if (refreshed) {
+        return { account: refreshed.account, needsPersist: false as const }
+      }
     } catch (error) {
       if (!isMissingStripeAccount(error)) throw error
     }
   }
 
-  return stripe.accounts.create(
+  const account = await stripe.accounts.create(
     {
       email: user.email,
       capabilities: { transfers: { requested: true } },
@@ -97,6 +106,7 @@ async function getOrCreateStripeAccount(
         : `bountiz-creator-${user.id}`,
     },
   )
+  return { account, needsPersist: true as const }
 }
 
 function isMissingStripeAccount(error: unknown) {

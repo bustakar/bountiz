@@ -39,5 +39,5 @@ export async function refreshStripeAccount(where: SQL) {
       ),
     )
 
-  return snapshot
+  return { account, snapshot }
 }
