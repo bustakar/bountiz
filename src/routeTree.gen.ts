@@ -15,9 +15,13 @@ import { Route as SignInRouteImport } from './routes/sign-in'
 import { Route as TermsRouteImport } from './routes/terms'
 import { Route as AppIndexRouteImport } from './routes/_app/index'
 import { Route as AppConnectionsRouteImport } from './routes/_app/connections'
+import { Route as AppCampaignsNewRouteImport } from './routes/_app/campaigns/new'
 import { Route as ApiAuthSplatRouteImport } from './routes/api/auth/$'
+import { Route as ApiCampaignsCheckoutRouteImport } from './routes/api/campaigns/checkout'
+import { Route as ApiCampaignsCreateRouteImport } from './routes/api/campaigns/create'
 import { Route as ApiStripeDashboardRouteImport } from './routes/api/stripe/dashboard'
 import { Route as ApiStripeOnboardRouteImport } from './routes/api/stripe/onboard'
+import { Route as ApiStripePaymentsWebhookRouteImport } from './routes/api/stripe/payments-webhook'
 import { Route as ApiStripeWebhookRouteImport } from './routes/api/stripe/webhook'
 
 const AppRoute = AppRouteImport.update({
@@ -49,9 +53,24 @@ const AppConnectionsRoute = AppConnectionsRouteImport.update({
   path: '/connections',
   getParentRoute: () => AppRoute,
 } as any)
+const AppCampaignsNewRoute = AppCampaignsNewRouteImport.update({
+  id: '/campaigns/new',
+  path: '/campaigns/new',
+  getParentRoute: () => AppRoute,
+} as any)
 const ApiAuthSplatRoute = ApiAuthSplatRouteImport.update({
   id: '/api/auth/$',
   path: '/api/auth/$',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const ApiCampaignsCheckoutRoute = ApiCampaignsCheckoutRouteImport.update({
+  id: '/api/campaigns/checkout',
+  path: '/api/campaigns/checkout',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const ApiCampaignsCreateRoute = ApiCampaignsCreateRouteImport.update({
+  id: '/api/campaigns/create',
+  path: '/api/campaigns/create',
   getParentRoute: () => rootRouteImport,
 } as any)
 const ApiStripeDashboardRoute = ApiStripeDashboardRouteImport.update({
@@ -64,6 +83,12 @@ const ApiStripeOnboardRoute = ApiStripeOnboardRouteImport.update({
   path: '/api/stripe/onboard',
   getParentRoute: () => rootRouteImport,
 } as any)
+const ApiStripePaymentsWebhookRoute =
+  ApiStripePaymentsWebhookRouteImport.update({
+    id: '/api/stripe/payments-webhook',
+    path: '/api/stripe/payments-webhook',
+    getParentRoute: () => rootRouteImport,
+  } as any)
 const ApiStripeWebhookRoute = ApiStripeWebhookRouteImport.update({
   id: '/api/stripe/webhook',
   path: '/api/stripe/webhook',
@@ -76,9 +101,13 @@ export interface FileRoutesByFullPath {
   '/sign-in': typeof SignInRoute
   '/terms': typeof TermsRoute
   '/connections': typeof AppConnectionsRoute
+  '/campaigns/new': typeof AppCampaignsNewRoute
   '/api/auth/$': typeof ApiAuthSplatRoute
+  '/api/campaigns/checkout': typeof ApiCampaignsCheckoutRoute
+  '/api/campaigns/create': typeof ApiCampaignsCreateRoute
   '/api/stripe/dashboard': typeof ApiStripeDashboardRoute
   '/api/stripe/onboard': typeof ApiStripeOnboardRoute
+  '/api/stripe/payments-webhook': typeof ApiStripePaymentsWebhookRoute
   '/api/stripe/webhook': typeof ApiStripeWebhookRoute
 }
 export interface FileRoutesByTo {
@@ -87,9 +116,13 @@ export interface FileRoutesByTo {
   '/terms': typeof TermsRoute
   '/connections': typeof AppConnectionsRoute
   '/': typeof AppIndexRoute
+  '/campaigns/new': typeof AppCampaignsNewRoute
   '/api/auth/$': typeof ApiAuthSplatRoute
+  '/api/campaigns/checkout': typeof ApiCampaignsCheckoutRoute
+  '/api/campaigns/create': typeof ApiCampaignsCreateRoute
   '/api/stripe/dashboard': typeof ApiStripeDashboardRoute
   '/api/stripe/onboard': typeof ApiStripeOnboardRoute
+  '/api/stripe/payments-webhook': typeof ApiStripePaymentsWebhookRoute
   '/api/stripe/webhook': typeof ApiStripeWebhookRoute
 }
 export interface FileRoutesById {
@@ -100,9 +133,13 @@ export interface FileRoutesById {
   '/terms': typeof TermsRoute
   '/_app/connections': typeof AppConnectionsRoute
   '/_app/': typeof AppIndexRoute
+  '/_app/campaigns/new': typeof AppCampaignsNewRoute
   '/api/auth/$': typeof ApiAuthSplatRoute
+  '/api/campaigns/checkout': typeof ApiCampaignsCheckoutRoute
+  '/api/campaigns/create': typeof ApiCampaignsCreateRoute
   '/api/stripe/dashboard': typeof ApiStripeDashboardRoute
   '/api/stripe/onboard': typeof ApiStripeOnboardRoute
+  '/api/stripe/payments-webhook': typeof ApiStripePaymentsWebhookRoute
   '/api/stripe/webhook': typeof ApiStripeWebhookRoute
 }
 export interface FileRouteTypes {
@@ -113,9 +150,13 @@ export interface FileRouteTypes {
     | '/sign-in'
     | '/terms'
     | '/connections'
+    | '/campaigns/new'
     | '/api/auth/$'
+    | '/api/campaigns/checkout'
+    | '/api/campaigns/create'
     | '/api/stripe/dashboard'
     | '/api/stripe/onboard'
+    | '/api/stripe/payments-webhook'
     | '/api/stripe/webhook'
   fileRoutesByTo: FileRoutesByTo
   to:
@@ -124,9 +165,13 @@ export interface FileRouteTypes {
     | '/terms'
     | '/connections'
     | '/'
+    | '/campaigns/new'
     | '/api/auth/$'
+    | '/api/campaigns/checkout'
+    | '/api/campaigns/create'
     | '/api/stripe/dashboard'
     | '/api/stripe/onboard'
+    | '/api/stripe/payments-webhook'
     | '/api/stripe/webhook'
   id:
     | '__root__'
@@ -136,9 +181,13 @@ export interface FileRouteTypes {
     | '/terms'
     | '/_app/connections'
     | '/_app/'
+    | '/_app/campaigns/new'
     | '/api/auth/$'
+    | '/api/campaigns/checkout'
+    | '/api/campaigns/create'
     | '/api/stripe/dashboard'
     | '/api/stripe/onboard'
+    | '/api/stripe/payments-webhook'
     | '/api/stripe/webhook'
   fileRoutesById: FileRoutesById
 }
@@ -148,8 +197,11 @@ export interface RootRouteChildren {
   SignInRoute: typeof SignInRoute
   TermsRoute: typeof TermsRoute
   ApiAuthSplatRoute: typeof ApiAuthSplatRoute
+  ApiCampaignsCheckoutRoute: typeof ApiCampaignsCheckoutRoute
+  ApiCampaignsCreateRoute: typeof ApiCampaignsCreateRoute
   ApiStripeDashboardRoute: typeof ApiStripeDashboardRoute
   ApiStripeOnboardRoute: typeof ApiStripeOnboardRoute
+  ApiStripePaymentsWebhookRoute: typeof ApiStripePaymentsWebhookRoute
   ApiStripeWebhookRoute: typeof ApiStripeWebhookRoute
 }
 
@@ -197,11 +249,32 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AppConnectionsRouteImport
       parentRoute: typeof AppRoute
     }
+    '/_app/campaigns/new': {
+      id: '/_app/campaigns/new'
+      path: '/campaigns/new'
+      fullPath: '/campaigns/new'
+      preLoaderRoute: typeof AppCampaignsNewRouteImport
+      parentRoute: typeof AppRoute
+    }
     '/api/auth/$': {
       id: '/api/auth/$'
       path: '/api/auth/$'
       fullPath: '/api/auth/$'
       preLoaderRoute: typeof ApiAuthSplatRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/api/campaigns/checkout': {
+      id: '/api/campaigns/checkout'
+      path: '/api/campaigns/checkout'
+      fullPath: '/api/campaigns/checkout'
+      preLoaderRoute: typeof ApiCampaignsCheckoutRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/api/campaigns/create': {
+      id: '/api/campaigns/create'
+      path: '/api/campaigns/create'
+      fullPath: '/api/campaigns/create'
+      preLoaderRoute: typeof ApiCampaignsCreateRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/api/stripe/dashboard': {
@@ -218,6 +291,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof ApiStripeOnboardRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/api/stripe/payments-webhook': {
+      id: '/api/stripe/payments-webhook'
+      path: '/api/stripe/payments-webhook'
+      fullPath: '/api/stripe/payments-webhook'
+      preLoaderRoute: typeof ApiStripePaymentsWebhookRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/api/stripe/webhook': {
       id: '/api/stripe/webhook'
       path: '/api/stripe/webhook'
@@ -231,11 +311,13 @@ declare module '@tanstack/react-router' {
 interface AppRouteChildren {
   AppConnectionsRoute: typeof AppConnectionsRoute
   AppIndexRoute: typeof AppIndexRoute
+  AppCampaignsNewRoute: typeof AppCampaignsNewRoute
 }
 
 const AppRouteChildren: AppRouteChildren = {
   AppConnectionsRoute: AppConnectionsRoute,
   AppIndexRoute: AppIndexRoute,
+  AppCampaignsNewRoute: AppCampaignsNewRoute,
 }
 
 const AppRouteWithChildren = AppRoute._addFileChildren(AppRouteChildren)
@@ -246,8 +328,11 @@ const rootRouteChildren: RootRouteChildren = {
   SignInRoute: SignInRoute,
   TermsRoute: TermsRoute,
   ApiAuthSplatRoute: ApiAuthSplatRoute,
+  ApiCampaignsCheckoutRoute: ApiCampaignsCheckoutRoute,
+  ApiCampaignsCreateRoute: ApiCampaignsCreateRoute,
   ApiStripeDashboardRoute: ApiStripeDashboardRoute,
   ApiStripeOnboardRoute: ApiStripeOnboardRoute,
+  ApiStripePaymentsWebhookRoute: ApiStripePaymentsWebhookRoute,
   ApiStripeWebhookRoute: ApiStripeWebhookRoute,
 }
 export const routeTree = rootRouteImport

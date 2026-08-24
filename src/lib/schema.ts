@@ -1,6 +1,8 @@
 import {
   boolean,
+  integer,
   jsonb,
+  pgEnum,
   pgTable,
   text,
   timestamp,
@@ -8,6 +10,42 @@ import {
 } from 'drizzle-orm/pg-core'
 
 import { user } from '@/lib/auth-schema'
+
+export const campaignStatus = pgEnum('campaign_status', [
+  'pending_payment',
+  'funded',
+])
+
+export const campaign = pgTable(
+  'campaign',
+  {
+    id: text('id').primaryKey(),
+    ownerUserId: text('owner_user_id')
+      .notNull()
+      .references(() => user.id, { onDelete: 'restrict' }),
+    name: text('name').notNull(),
+    description: text('description').notNull(),
+    budgetAmount: integer('budget_amount').notNull(),
+    currency: text('currency').notNull(),
+    status: campaignStatus('status').default('pending_payment').notNull(),
+    stripeCheckoutSessionId: text('stripe_checkout_session_id'),
+    stripePaymentIntentId: text('stripe_payment_intent_id'),
+    fundedAt: timestamp('funded_at'),
+    createdAt: timestamp('created_at').defaultNow().notNull(),
+    updatedAt: timestamp('updated_at')
+      .defaultNow()
+      .$onUpdate(() => new Date())
+      .notNull(),
+  },
+  (table) => [
+    uniqueIndex('campaign_stripe_checkout_session_id_uidx').on(
+      table.stripeCheckoutSessionId,
+    ),
+    uniqueIndex('campaign_stripe_payment_intent_id_uidx').on(
+      table.stripePaymentIntentId,
+    ),
+  ],
+)
 
 export const stripeConnectedAccount = pgTable(
   'stripe_connected_account',

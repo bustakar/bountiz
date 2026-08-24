@@ -16,6 +16,10 @@ export function isStripeConfigured() {
   return Boolean(env.STRIPE_SECRET_KEY && env.STRIPE_WEBHOOK_SECRET)
 }
 
+export function isStripePaymentsConfigured() {
+  return Boolean(env.STRIPE_SECRET_KEY && env.STRIPE_PAYMENTS_WEBHOOK_SECRET)
+}
+
 export function getStripe() {
   if (!env.STRIPE_SECRET_KEY) throw new Error('Stripe is not configured')
   client ??= new Stripe(env.STRIPE_SECRET_KEY, {
