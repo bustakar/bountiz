@@ -51,6 +51,9 @@ export function getStripePayoutStatus(snapshot: StripeAccountSnapshot) {
   ) {
     return 'ready' as const
   }
+  if (snapshot.disabledReason?.startsWith('rejected.')) {
+    return 'restricted' as const
+  }
   if (!snapshot.detailsSubmitted || snapshot.requirementsDue.length > 0) {
     return 'incomplete' as const
   }

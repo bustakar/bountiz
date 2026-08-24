@@ -35,27 +35,29 @@ async function onboardCreator({ request }: { request: Request }) {
       id: session.user.id,
       email: session.user.email,
     })
-    const account = prepared.account
+    const accountId = prepared.account.id
 
     if (prepared.needsPersist) {
       await db
         .insert(stripeConnectedAccount)
         .values({
           userId: session.user.id,
-          stripeAccountId: account.id,
-          ...getStripeAccountSnapshot(account),
+          stripeAccountId: accountId,
+          ...getStripeAccountSnapshot(prepared.account),
         })
         .onConflictDoUpdate({
           target: stripeConnectedAccount.userId,
           set: {
-            stripeAccountId: account.id,
-            ...getStripeAccountSnapshot(account),
+            stripeAccountId: accountId,
+            ...getStripeAccountSnapshot(prepared.account),
+            refreshToken: null,
+            refreshExpiresAt: null,
           },
         })
     }
 
     const link = await stripe.accountLinks.create({
-      account: account.id,
+      account: accountId,
       type: 'account_onboarding',
       collection_options: {
         fields: 'eventually_due',
@@ -81,7 +83,10 @@ async function getOrCreateStripeAccount(
         eq(stripeConnectedAccount.userId, user.id),
       )
       if (refreshed) {
-        return { account: refreshed.account, needsPersist: false as const }
+        return {
+          account: { id: refreshed.stripeAccountId },
+          needsPersist: false as const,
+        }
       }
     } catch (error) {
       if (!isMissingStripeAccount(error)) throw error

@@ -1,5 +1,4 @@
 import {
-  bigint,
   boolean,
   jsonb,
   pgTable,
@@ -25,11 +24,8 @@ export const stripeConnectedAccount = pgTable(
       .default([])
       .notNull(),
     disabledReason: text('disabled_reason'),
-    webhookSyncVersion: bigint('webhook_sync_version', {
-      mode: 'number',
-    })
-      .default(0)
-      .notNull(),
+    refreshToken: text('refresh_token'),
+    refreshExpiresAt: timestamp('refresh_expires_at'),
     createdAt: timestamp('created_at').defaultNow().notNull(),
     updatedAt: timestamp('updated_at')
       .defaultNow()

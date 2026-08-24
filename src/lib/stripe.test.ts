@@ -40,6 +40,7 @@ describe('getStripePayoutStatus', () => {
       getStripePayoutStatus({
         ...baseSnapshot,
         payoutsEnabled: false,
+        requirementsDue: ['individual.verification.document'],
         disabledReason: 'rejected.fraud',
       }),
     ).toBe('restricted')
