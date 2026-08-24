@@ -17,17 +17,26 @@ export function StripePayoutButton({ stripe }: { stripe: StripeConnection }) {
       ? 'Finish Stripe setup'
       : 'Connect Stripe'
 
+  if (dashboard) {
+    return (
+      <Button
+        variant="outline"
+        onClick={() => window.location.assign('/api/stripe/dashboard')}
+      >
+        {action}
+      </Button>
+    )
+  }
+
   return (
-    <Button
-      disabled={!stripe.available || status === 'unavailable'}
-      variant={stripe.connection ? 'outline' : 'default'}
-      onClick={() =>
-        window.location.assign(
-          dashboard ? '/api/stripe/dashboard' : '/api/stripe/onboard',
-        )
-      }
-    >
-      {action}
-    </Button>
+    <form method="post" action="/api/stripe/onboard">
+      <Button
+        type="submit"
+        disabled={!stripe.available || status === 'unavailable'}
+        variant={stripe.connection ? 'outline' : 'default'}
+      >
+        {action}
+      </Button>
+    </form>
   )
 }

@@ -36,10 +36,29 @@ async function handleStripeWebhook({ request }: { request: Request }) {
     if (inserted.length === 0) return
 
     if (event.type === 'account.updated') {
+      const connection = (
+        await transaction
+          .select({ stripeAccountId: stripeConnectedAccount.stripeAccountId })
+          .from(stripeConnectedAccount)
+          .where(
+            eq(stripeConnectedAccount.stripeAccountId, event.data.object.id),
+          )
+          .for('update')
+      ).at(0)
+      if (!connection) return
+
+      const account = await getStripe().accounts.retrieve(
+        connection.stripeAccountId,
+      )
       await transaction
         .update(stripeConnectedAccount)
-        .set(getStripeAccountSnapshot(event.data.object))
-        .where(eq(stripeConnectedAccount.stripeAccountId, event.data.object.id))
+        .set(getStripeAccountSnapshot(account))
+        .where(
+          eq(
+            stripeConnectedAccount.stripeAccountId,
+            connection.stripeAccountId,
+          ),
+        )
     }
   })
 

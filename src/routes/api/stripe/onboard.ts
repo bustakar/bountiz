@@ -1,5 +1,6 @@
 import { eq } from 'drizzle-orm'
 import { createFileRoute } from '@tanstack/react-router'
+import Stripe from 'stripe'
 
 import { auth } from '@/lib/auth'
 import { db } from '@/lib/database'
@@ -12,10 +13,14 @@ import {
 } from '@/lib/stripe'
 
 export const Route = createFileRoute('/api/stripe/onboard')({
-  server: { handlers: { GET: onboardCreator } },
+  server: { handlers: { POST: onboardCreator } },
 })
 
 async function onboardCreator({ request }: { request: Request }) {
+  if (request.headers.get('origin') !== new URL(env.APP_URL).origin) {
+    return new Response('Forbidden', { status: 403 })
+  }
+
   const session = await auth.api.getSession({ headers: request.headers })
   if (!session) return new Response('Unauthorized', { status: 401 })
   if (!isStripeConfigured()) return redirectToCampaigns('error')
@@ -25,22 +30,10 @@ async function onboardCreator({ request }: { request: Request }) {
     const existing = await db.query.stripeConnectedAccount.findFirst({
       where: eq(stripeConnectedAccount.userId, session.user.id),
     })
-    const account = existing
-      ? await stripe.accounts.retrieve(existing.stripeAccountId)
-      : await stripe.accounts.create(
-          {
-            email: session.user.email,
-            capabilities: { transfers: { requested: true } },
-            controller: {
-              fees: { payer: 'application' },
-              losses: { payments: 'application' },
-              requirement_collection: 'stripe',
-              stripe_dashboard: { type: 'express' },
-            },
-            metadata: { bountizUserId: session.user.id },
-          },
-          { idempotencyKey: `bountiz-creator-${session.user.id}` },
-        )
+    const account = await getOrCreateStripeAccount(stripe, existing, {
+      id: session.user.id,
+      email: session.user.email,
+    })
 
     await db
       .insert(stripeConnectedAccount)
@@ -51,7 +44,10 @@ async function onboardCreator({ request }: { request: Request }) {
       })
       .onConflictDoUpdate({
         target: stripeConnectedAccount.userId,
-        set: getStripeAccountSnapshot(account),
+        set: {
+          stripeAccountId: account.id,
+          ...getStripeAccountSnapshot(account),
+        },
       })
 
     const link = await stripe.accountLinks.create({
@@ -68,6 +64,46 @@ async function onboardCreator({ request }: { request: Request }) {
   } catch {
     return redirectToCampaigns('error')
   }
+}
+
+async function getOrCreateStripeAccount(
+  stripe: Stripe,
+  existing: { stripeAccountId: string } | undefined,
+  user: { id: string; email: string },
+) {
+  if (existing) {
+    try {
+      return await stripe.accounts.retrieve(existing.stripeAccountId)
+    } catch (error) {
+      if (!isMissingStripeAccount(error)) throw error
+    }
+  }
+
+  return stripe.accounts.create(
+    {
+      email: user.email,
+      capabilities: { transfers: { requested: true } },
+      controller: {
+        fees: { payer: 'application' },
+        losses: { payments: 'application' },
+        requirement_collection: 'stripe',
+        stripe_dashboard: { type: 'express' },
+      },
+      metadata: { bountizUserId: user.id },
+    },
+    {
+      idempotencyKey: existing
+        ? `bountiz-creator-${user.id}-replace-${existing.stripeAccountId}`
+        : `bountiz-creator-${user.id}`,
+    },
+  )
+}
+
+function isMissingStripeAccount(error: unknown) {
+  return (
+    error instanceof Stripe.errors.StripeInvalidRequestError &&
+    error.code === 'resource_missing'
+  )
 }
 
 function redirectToCampaigns(stripe: 'error') {
