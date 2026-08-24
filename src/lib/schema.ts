@@ -25,9 +25,11 @@ export const stripeConnectedAccount = pgTable(
       .default([])
       .notNull(),
     disabledReason: text('disabled_reason'),
-    lastWebhookCreatedAt: bigint('last_webhook_created_at', {
+    webhookSyncVersion: bigint('webhook_sync_version', {
       mode: 'number',
-    }),
+    })
+      .default(0)
+      .notNull(),
     createdAt: timestamp('created_at').defaultNow().notNull(),
     updatedAt: timestamp('updated_at')
       .defaultNow()

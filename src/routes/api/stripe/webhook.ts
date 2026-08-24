@@ -1,4 +1,4 @@
-import { and, eq, isNull, lte, or } from 'drizzle-orm'
+import { and, eq, sql } from 'drizzle-orm'
 import { createFileRoute } from '@tanstack/react-router'
 
 import { db } from '@/lib/database'
@@ -27,41 +27,44 @@ async function handleStripeWebhook({ request }: { request: Request }) {
     return new Response('Invalid Stripe signature', { status: 400 })
   }
 
+  // Only the most recently started refresh may persist its Stripe snapshot.
   const connection =
     event.type === 'account.updated'
-      ? await db.query.stripeConnectedAccount.findFirst({
-          columns: { stripeAccountId: true },
-          where: eq(
-            stripeConnectedAccount.stripeAccountId,
-            event.data.object.id,
-          ),
-        })
+      ? (
+          await db
+            .update(stripeConnectedAccount)
+            .set({
+              webhookSyncVersion: sql`${stripeConnectedAccount.webhookSyncVersion} + 1`,
+            })
+            .where(
+              eq(stripeConnectedAccount.stripeAccountId, event.data.object.id),
+            )
+            .returning({
+              stripeAccountId: stripeConnectedAccount.stripeAccountId,
+              webhookSyncVersion: stripeConnectedAccount.webhookSyncVersion,
+            })
+        ).at(0)
       : undefined
   const account = connection
     ? await getStripe().accounts.retrieve(connection.stripeAccountId)
     : undefined
 
   await db.transaction(async (transaction) => {
-    const inserted = await transaction
+    await transaction
       .insert(stripeWebhookEvent)
       .values({ id: event.id, type: event.type })
       .onConflictDoNothing()
-      .returning({ id: stripeWebhookEvent.id })
-    if (inserted.length === 0) return
 
-    if (account) {
+    if (account && connection) {
       await transaction
         .update(stripeConnectedAccount)
-        .set({
-          ...getStripeAccountSnapshot(account),
-          lastWebhookCreatedAt: event.created,
-        })
+        .set(getStripeAccountSnapshot(account))
         .where(
           and(
             eq(stripeConnectedAccount.stripeAccountId, account.id),
-            or(
-              isNull(stripeConnectedAccount.lastWebhookCreatedAt),
-              lte(stripeConnectedAccount.lastWebhookCreatedAt, event.created),
+            eq(
+              stripeConnectedAccount.webhookSyncVersion,
+              connection.webhookSyncVersion,
             ),
           ),
         )
