@@ -3,13 +3,13 @@ import { createFileRoute } from '@tanstack/react-router'
 
 import { auth } from '@/lib/auth'
 import {
-  fundCampaignFromCheckoutSession,
+  continueCampaignCheckout as continuePendingCampaignCheckout,
   isCampaignAdmin,
 } from '@/lib/campaign-payment'
 import { db } from '@/lib/database'
 import { env } from '@/lib/env'
 import { campaign } from '@/lib/schema'
-import { getStripe, isStripePaymentsConfigured } from '@/lib/stripe'
+import { isStripePaymentsConfigured } from '@/lib/stripe'
 
 export const Route = createFileRoute('/api/campaigns/checkout')({
   server: { handlers: { POST: continueCampaignCheckout } },
@@ -21,7 +21,7 @@ async function continueCampaignCheckout({ request }: { request: Request }) {
   }
 
   const session = await auth.api.getSession({ headers: request.headers })
-  if (!session || !isCampaignAdmin(session.user.email)) {
+  if (!session || !isCampaignAdmin(session.user.id)) {
     return new Response('Unauthorized', { status: 401 })
   }
   if (!isStripePaymentsConfigured()) return redirectToCampaigns('error')
@@ -37,22 +37,20 @@ async function continueCampaignCheckout({ request }: { request: Request }) {
       eq(campaign.status, 'pending_payment'),
     ),
   })
-  if (!pending?.stripeCheckoutSessionId) return redirectToCampaigns('error')
+  if (!pending) return redirectToCampaigns('error')
 
   try {
-    const checkout = await getStripe().checkout.sessions.retrieve(
-      pending.stripeCheckoutSessionId,
+    const checkout = await continuePendingCampaignCheckout(
+      pending,
+      session.user.email,
     )
-    if (await fundCampaignFromCheckoutSession(checkout)) {
+    if (checkout.status === 'funded') {
       return redirectToCampaigns('payment_submitted')
     }
-    if (checkout.status === 'open' && checkout.url) {
-      return Response.redirect(checkout.url, 303)
-    }
+    return Response.redirect(checkout.url, 303)
   } catch {
     return redirectToCampaigns('error')
   }
-  return redirectToCampaigns('error')
 }
 
 function redirectToCampaigns(result: 'error' | 'payment_submitted') {

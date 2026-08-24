@@ -48,8 +48,10 @@ stripe listen --events account.updated --forward-connect-to localhost:3000/api/s
 
 ### Campaign funding
 
-Set `ADMIN_EMAIL` to the account that can create campaigns. Campaign budgets use USD and are
-collected up front with Stripe Checkout. Create a second Snapshot event destination at
+Create the administrator account, then set `ADMIN_USER_ID` to its ID from the `user` table. Using
+the immutable account ID prevents someone from claiming administrator access by registering a
+configured email address. Campaign budgets use USD and are collected up front with Stripe Checkout.
+Create a second Snapshot event destination at
 `/api/stripe/payments-webhook`, select your platform account as its source, subscribe it to
 `checkout.session.completed`, and save its signing secret as `STRIPE_PAYMENTS_WEBHOOK_SECRET`.
 

@@ -4,8 +4,24 @@ import {
   maximumCampaignBudget,
   minimumCampaignBudget,
   parseCampaignInput,
+  parseCampaignSubmissionId,
   parseUsdAmount,
 } from './campaign'
+
+describe('parseCampaignSubmissionId', () => {
+  it('accepts UUID submission tokens', () => {
+    expect(
+      parseCampaignSubmissionId('24F8B5E0-9C9B-4DA0-A3E8-86A944D3D2C8'),
+    ).toBe('24f8b5e0-9c9b-4da0-a3e8-86a944d3d2c8')
+  })
+
+  it.each(['', 'campaign', '24f8b5e0-9c9b-4da0-a3e8'])(
+    'rejects %s',
+    (value) => {
+      expect(parseCampaignSubmissionId(value)).toBeNull()
+    },
+  )
+})
 
 describe('parseUsdAmount', () => {
   it.each([

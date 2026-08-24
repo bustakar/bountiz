@@ -18,10 +18,12 @@ export const Route = createFileRoute('/_app/campaigns/new')({
     const access = await getCampaignCreationAccess()
     if (!access.available) throw redirect({ to: '/' })
   },
+  loader: () => ({ submissionId: crypto.randomUUID() }),
   component: NewCampaignPage,
 })
 
 function NewCampaignPage() {
+  const { submissionId } = Route.useLoaderData()
   return (
     <main className="flex flex-1 justify-center p-6">
       <Card className="h-fit w-full max-w-xl">
@@ -32,6 +34,7 @@ function NewCampaignPage() {
           </CardDescription>
         </CardHeader>
         <form method="post" action="/api/campaigns/create">
+          <input type="hidden" name="submissionId" value={submissionId} />
           <CardContent className="grid gap-5">
             <div className="grid gap-2">
               <Label htmlFor="name">Campaign name</Label>

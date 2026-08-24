@@ -1,10 +1,14 @@
-import { and, eq } from 'drizzle-orm'
+import { eq } from 'drizzle-orm'
 import { createFileRoute } from '@tanstack/react-router'
 
 import { auth } from '@/lib/auth'
-import { campaignCurrency, parseCampaignInput } from '@/lib/campaign'
 import {
-  createCampaignCheckoutSession,
+  campaignCurrency,
+  parseCampaignInput,
+  parseCampaignSubmissionId,
+} from '@/lib/campaign'
+import {
+  continueCampaignCheckout,
   isCampaignAdmin,
 } from '@/lib/campaign-payment'
 import { db } from '@/lib/database'
@@ -22,7 +26,7 @@ async function createCampaign({ request }: { request: Request }) {
   }
 
   const session = await auth.api.getSession({ headers: request.headers })
-  if (!session || !isCampaignAdmin(session.user.email)) {
+  if (!session || !isCampaignAdmin(session.user.id)) {
     return new Response('Unauthorized', { status: 401 })
   }
   if (!isStripePaymentsConfigured()) return redirectToCampaigns('error')
@@ -33,37 +37,48 @@ async function createCampaign({ request }: { request: Request }) {
     description: form.get('description'),
     budget: form.get('budget'),
   })
-  if (!input) return new Response('Invalid campaign', { status: 400 })
+  const id = parseCampaignSubmissionId(form.get('submissionId'))
+  if (!input || !id) return new Response('Invalid campaign', { status: 400 })
 
-  const id = crypto.randomUUID()
-  await db.insert(campaign).values({
-    id,
-    ownerUserId: session.user.id,
-    name: input.name,
-    description: input.description,
-    budgetAmount: input.budgetAmount,
-    currency: campaignCurrency,
+  await db
+    .insert(campaign)
+    .values({
+      id,
+      ownerUserId: session.user.id,
+      name: input.name,
+      description: input.description,
+      budgetAmount: input.budgetAmount,
+      currency: campaignCurrency,
+    })
+    .onConflictDoNothing()
+
+  const pending = await db.query.campaign.findFirst({
+    where: eq(campaign.id, id),
   })
+  if (
+    !pending ||
+    pending.ownerUserId !== session.user.id ||
+    pending.name !== input.name ||
+    pending.description !== input.description ||
+    pending.budgetAmount !== input.budgetAmount ||
+    pending.currency !== campaignCurrency ||
+    pending.status !== 'pending_payment'
+  ) {
+    return new Response('Campaign submission already used', { status: 409 })
+  }
 
   try {
-    const checkout = await createCampaignCheckoutSession(
-      { id, name: input.name, budgetAmount: input.budgetAmount },
-      session.user.email,
-    )
-    await db
-      .update(campaign)
-      .set({ stripeCheckoutSessionId: checkout.id })
-      .where(and(eq(campaign.id, id), eq(campaign.status, 'pending_payment')))
+    const checkout = await continueCampaignCheckout(pending, session.user.email)
+    if (checkout.status === 'funded') {
+      return redirectToCampaigns('payment_submitted')
+    }
     return Response.redirect(checkout.url, 303)
   } catch {
-    await db
-      .delete(campaign)
-      .where(and(eq(campaign.id, id), eq(campaign.status, 'pending_payment')))
     return redirectToCampaigns('error')
   }
 }
 
-function redirectToCampaigns(result: 'error') {
+function redirectToCampaigns(result: 'error' | 'payment_submitted') {
   const url = new URL('/', env.APP_URL)
   url.searchParams.set('campaign', result)
   return Response.redirect(url, 303)

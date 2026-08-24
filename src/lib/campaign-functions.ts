@@ -13,7 +13,7 @@ export const getCampaigns = createServerFn({ method: 'GET' }).handler(
     const session = await auth.api.getSession({ headers: getRequestHeaders() })
     if (!session) throw new Error('Unauthorized')
 
-    const admin = isCampaignAdmin(session.user.email)
+    const admin = isCampaignAdmin(session.user.id)
     const rows = await db.query.campaign.findMany({
       where: admin ? undefined : eq(campaign.status, 'funded'),
       orderBy: desc(campaign.createdAt),
@@ -24,13 +24,12 @@ export const getCampaigns = createServerFn({ method: 'GET' }).handler(
         budgetAmount: true,
         currency: true,
         status: true,
-        stripeCheckoutSessionId: true,
       },
     })
     return {
-      campaigns: rows.map(({ stripeCheckoutSessionId, ...value }) => ({
+      campaigns: rows.map((value) => ({
         ...value,
-        canContinuePayment: Boolean(stripeCheckoutSessionId),
+        canContinuePayment: admin && value.status === 'pending_payment',
       })),
       canCreate: admin && isStripePaymentsConfigured(),
     }
@@ -44,7 +43,7 @@ export const getCampaignCreationAccess = createServerFn({
   return {
     available: Boolean(
       session &&
-      isCampaignAdmin(session.user.email) &&
+      isCampaignAdmin(session.user.id) &&
       isStripePaymentsConfigured(),
     ),
   }

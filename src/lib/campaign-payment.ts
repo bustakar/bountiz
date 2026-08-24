@@ -13,13 +13,18 @@ type CampaignCheckout = {
   budgetAmount: number
 }
 
-export function isCampaignAdmin(email: string) {
-  return env.ADMIN_EMAIL?.trim().toLowerCase() === email.trim().toLowerCase()
+type PendingCampaignCheckout = CampaignCheckout & {
+  stripeCheckoutSessionId: string | null
 }
 
-export async function createCampaignCheckoutSession(
+export function isCampaignAdmin(userId: string) {
+  return env.ADMIN_USER_ID?.trim() === userId
+}
+
+async function createCampaignCheckoutSession(
   value: CampaignCheckout,
   customerEmail: string,
+  idempotencyKey: string,
 ) {
   const session = await getStripe().checkout.sessions.create(
     {
@@ -48,10 +53,49 @@ export async function createCampaignCheckoutSession(
       ).toString(),
       cancel_url: new URL('/?campaign=cancelled', env.APP_URL).toString(),
     },
-    { idempotencyKey: `fund-campaign-${value.id}` },
+    { idempotencyKey },
   )
   if (!session.url) throw new Error('Stripe Checkout did not return a URL')
   return { id: session.id, url: session.url }
+}
+
+export async function continueCampaignCheckout(
+  value: PendingCampaignCheckout,
+  customerEmail: string,
+) {
+  if (value.stripeCheckoutSessionId) {
+    const existing = await getStripe().checkout.sessions.retrieve(
+      value.stripeCheckoutSessionId,
+    )
+    if (await fundCampaignFromCheckoutSession(existing)) {
+      return { status: 'funded' as const }
+    }
+    if (existing.status === 'open' && existing.url) {
+      return { status: 'checkout' as const, url: existing.url }
+    }
+  }
+
+  const previousSessionId = value.stripeCheckoutSessionId
+  const checkout = await createCampaignCheckoutSession(
+    value,
+    customerEmail,
+    previousSessionId
+      ? `fund-campaign-${value.id}-after-${previousSessionId}`
+      : `fund-campaign-${value.id}-initial`,
+  )
+  await db
+    .update(campaign)
+    .set({ stripeCheckoutSessionId: checkout.id })
+    .where(
+      and(
+        eq(campaign.id, value.id),
+        eq(campaign.status, 'pending_payment'),
+        previousSessionId
+          ? eq(campaign.stripeCheckoutSessionId, previousSessionId)
+          : isNull(campaign.stripeCheckoutSessionId),
+      ),
+    )
+  return { status: 'checkout' as const, url: checkout.url }
 }
 
 export async function fundCampaignFromCheckoutSession(
