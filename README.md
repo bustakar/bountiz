@@ -46,6 +46,19 @@ For local testing, the Stripe CLI can forward Connect events and print the match
 stripe listen --events account.updated --forward-connect-to localhost:3000/api/stripe/webhook
 ```
 
+### Campaign funding
+
+Set `ADMIN_EMAIL` to the account that can create campaigns. Campaign budgets use USD and are
+collected up front with Stripe Checkout. Create a second Snapshot event destination at
+`/api/stripe/payments-webhook`, select your platform account as its source, subscribe it to
+`checkout.session.completed`, and save its signing secret as `STRIPE_PAYMENTS_WEBHOOK_SECRET`.
+
+For local testing, run a separate Stripe CLI listener:
+
+```sh
+stripe listen --events checkout.session.completed --forward-to localhost:3000/api/stripe/payments-webhook
+```
+
 ## Status
 
 Bountiz is in initial development. Do not use it to accept or distribute real funds yet.

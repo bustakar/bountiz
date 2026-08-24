@@ -1,4 +1,5 @@
 import {
+  Link,
   Outlet,
   createFileRoute,
   getRouteApi,
@@ -8,6 +9,7 @@ import {
 
 import { AppSidebar } from '@/components/app-sidebar'
 import { StripePayoutButton } from '@/components/stripe-payout-button'
+import { Button } from '@/components/ui/button'
 import { Separator } from '@/components/ui/separator'
 import {
   SidebarInset,
@@ -51,10 +53,15 @@ function AppLayout() {
 }
 
 function CampaignsHeaderAction() {
-  const { stripe } = campaignsRoute.useLoaderData()
+  const { campaigns, stripe } = campaignsRoute.useLoaderData()
 
   return (
-    <div className="ml-auto">
+    <div className="ml-auto flex items-center gap-2">
+      {campaigns.canCreate && (
+        <Button asChild>
+          <Link to="/campaigns/new">Create campaign</Link>
+        </Button>
+      )}
       <StripePayoutButton stripe={stripe} />
     </div>
   )

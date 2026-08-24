@@ -43,6 +43,13 @@
       "when": 1787575494397,
       "tag": "0005_groovy_taskmaster",
       "breakpoints": true
+    },
+    {
+      "idx": 6,
+      "version": "7",
+      "when": 1787577459384,
+      "tag": "0006_nosy_ricochet",
+      "breakpoints": true
     }
   ]
 }
