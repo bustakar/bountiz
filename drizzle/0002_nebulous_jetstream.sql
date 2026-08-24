@@ -1,0 +1,1 @@
+ALTER TABLE "stripe_connected_account" ADD COLUMN "last_webhook_created_at" bigint;

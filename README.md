@@ -2,8 +2,8 @@
 
 Open-source, agent-first creator campaigns with payouts based on verified reach.
 
-A promoter funds a campaign, creators submit published videos, and Bountiz tracks performance and
-coordinates payouts through Stripe Connect. Bountiz is not an escrow service.
+The instance administrator funds campaigns, creators submit published videos, and Bountiz tracks
+performance and coordinates payouts through Stripe Connect. Bountiz is not an escrow service.
 
 ## Stack
 
@@ -31,6 +31,19 @@ Run the complete local verification:
 
 ```sh
 pnpm check
+```
+
+### Stripe Connect
+
+Complete Stripe's Connect platform onboarding first. Then set `STRIPE_SECRET_KEY` and
+`STRIPE_WEBHOOK_SECRET` to enable creator payout onboarding. Create a Snapshot event destination at
+`/api/stripe/webhook`, select Connected accounts as its source, and subscribe it to
+`account.updated` events.
+
+For local testing, the Stripe CLI can forward Connect events and print the matching webhook secret:
+
+```sh
+stripe listen --events account.updated --forward-connect-to localhost:3000/api/stripe/webhook
 ```
 
 ## Status
