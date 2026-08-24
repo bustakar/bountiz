@@ -1,11 +1,13 @@
 import {
   Outlet,
   createFileRoute,
+  getRouteApi,
   redirect,
   useRouterState,
 } from '@tanstack/react-router'
 
 import { AppSidebar } from '@/components/app-sidebar'
+import { StripePayoutButton } from '@/components/stripe-payout-button'
 import { Separator } from '@/components/ui/separator'
 import {
   SidebarInset,
@@ -13,6 +15,8 @@ import {
   SidebarTrigger,
 } from '@/components/ui/sidebar'
 import { getSession } from '@/lib/auth-functions'
+
+const campaignsRoute = getRouteApi('/_app/')
 
 export const Route = createFileRoute('/_app')({
   beforeLoad: async () => {
@@ -38,9 +42,20 @@ function AppLayout() {
           <SidebarTrigger className="-ml-1" />
           <Separator orientation="vertical" className="mr-2 h-4" />
           <span className="text-sm font-medium">{section}</span>
+          {pathname === '/' && <CampaignsHeaderAction />}
         </header>
         <Outlet />
       </SidebarInset>
     </SidebarProvider>
+  )
+}
+
+function CampaignsHeaderAction() {
+  const { stripe } = campaignsRoute.useLoaderData()
+
+  return (
+    <div className="ml-auto">
+      <StripePayoutButton stripe={stripe} />
+    </div>
   )
 }

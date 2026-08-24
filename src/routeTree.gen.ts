@@ -16,6 +16,9 @@ import { Route as TermsRouteImport } from './routes/terms'
 import { Route as AppIndexRouteImport } from './routes/_app/index'
 import { Route as AppConnectionsRouteImport } from './routes/_app/connections'
 import { Route as ApiAuthSplatRouteImport } from './routes/api/auth/$'
+import { Route as ApiStripeDashboardRouteImport } from './routes/api/stripe/dashboard'
+import { Route as ApiStripeOnboardRouteImport } from './routes/api/stripe/onboard'
+import { Route as ApiStripeWebhookRouteImport } from './routes/api/stripe/webhook'
 
 const AppRoute = AppRouteImport.update({
   id: '/_app',
@@ -51,6 +54,21 @@ const ApiAuthSplatRoute = ApiAuthSplatRouteImport.update({
   path: '/api/auth/$',
   getParentRoute: () => rootRouteImport,
 } as any)
+const ApiStripeDashboardRoute = ApiStripeDashboardRouteImport.update({
+  id: '/api/stripe/dashboard',
+  path: '/api/stripe/dashboard',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const ApiStripeOnboardRoute = ApiStripeOnboardRouteImport.update({
+  id: '/api/stripe/onboard',
+  path: '/api/stripe/onboard',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const ApiStripeWebhookRoute = ApiStripeWebhookRouteImport.update({
+  id: '/api/stripe/webhook',
+  path: '/api/stripe/webhook',
+  getParentRoute: () => rootRouteImport,
+} as any)
 
 export interface FileRoutesByFullPath {
   '/': typeof AppIndexRoute
@@ -59,6 +77,9 @@ export interface FileRoutesByFullPath {
   '/terms': typeof TermsRoute
   '/connections': typeof AppConnectionsRoute
   '/api/auth/$': typeof ApiAuthSplatRoute
+  '/api/stripe/dashboard': typeof ApiStripeDashboardRoute
+  '/api/stripe/onboard': typeof ApiStripeOnboardRoute
+  '/api/stripe/webhook': typeof ApiStripeWebhookRoute
 }
 export interface FileRoutesByTo {
   '/privacy': typeof PrivacyRoute
@@ -67,6 +88,9 @@ export interface FileRoutesByTo {
   '/connections': typeof AppConnectionsRoute
   '/': typeof AppIndexRoute
   '/api/auth/$': typeof ApiAuthSplatRoute
+  '/api/stripe/dashboard': typeof ApiStripeDashboardRoute
+  '/api/stripe/onboard': typeof ApiStripeOnboardRoute
+  '/api/stripe/webhook': typeof ApiStripeWebhookRoute
 }
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
@@ -77,13 +101,33 @@ export interface FileRoutesById {
   '/_app/connections': typeof AppConnectionsRoute
   '/_app/': typeof AppIndexRoute
   '/api/auth/$': typeof ApiAuthSplatRoute
+  '/api/stripe/dashboard': typeof ApiStripeDashboardRoute
+  '/api/stripe/onboard': typeof ApiStripeOnboardRoute
+  '/api/stripe/webhook': typeof ApiStripeWebhookRoute
 }
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
   fullPaths:
-    '/' | '/privacy' | '/sign-in' | '/terms' | '/connections' | '/api/auth/$'
+    | '/'
+    | '/privacy'
+    | '/sign-in'
+    | '/terms'
+    | '/connections'
+    | '/api/auth/$'
+    | '/api/stripe/dashboard'
+    | '/api/stripe/onboard'
+    | '/api/stripe/webhook'
   fileRoutesByTo: FileRoutesByTo
-  to: '/privacy' | '/sign-in' | '/terms' | '/connections' | '/' | '/api/auth/$'
+  to:
+    | '/privacy'
+    | '/sign-in'
+    | '/terms'
+    | '/connections'
+    | '/'
+    | '/api/auth/$'
+    | '/api/stripe/dashboard'
+    | '/api/stripe/onboard'
+    | '/api/stripe/webhook'
   id:
     | '__root__'
     | '/_app'
@@ -93,6 +137,9 @@ export interface FileRouteTypes {
     | '/_app/connections'
     | '/_app/'
     | '/api/auth/$'
+    | '/api/stripe/dashboard'
+    | '/api/stripe/onboard'
+    | '/api/stripe/webhook'
   fileRoutesById: FileRoutesById
 }
 export interface RootRouteChildren {
@@ -101,6 +148,9 @@ export interface RootRouteChildren {
   SignInRoute: typeof SignInRoute
   TermsRoute: typeof TermsRoute
   ApiAuthSplatRoute: typeof ApiAuthSplatRoute
+  ApiStripeDashboardRoute: typeof ApiStripeDashboardRoute
+  ApiStripeOnboardRoute: typeof ApiStripeOnboardRoute
+  ApiStripeWebhookRoute: typeof ApiStripeWebhookRoute
 }
 
 declare module '@tanstack/react-router' {
@@ -154,6 +204,27 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof ApiAuthSplatRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/api/stripe/dashboard': {
+      id: '/api/stripe/dashboard'
+      path: '/api/stripe/dashboard'
+      fullPath: '/api/stripe/dashboard'
+      preLoaderRoute: typeof ApiStripeDashboardRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/api/stripe/onboard': {
+      id: '/api/stripe/onboard'
+      path: '/api/stripe/onboard'
+      fullPath: '/api/stripe/onboard'
+      preLoaderRoute: typeof ApiStripeOnboardRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/api/stripe/webhook': {
+      id: '/api/stripe/webhook'
+      path: '/api/stripe/webhook'
+      fullPath: '/api/stripe/webhook'
+      preLoaderRoute: typeof ApiStripeWebhookRouteImport
+      parentRoute: typeof rootRouteImport
+    }
   }
 }
 
@@ -175,6 +246,9 @@ const rootRouteChildren: RootRouteChildren = {
   SignInRoute: SignInRoute,
   TermsRoute: TermsRoute,
   ApiAuthSplatRoute: ApiAuthSplatRoute,
+  ApiStripeDashboardRoute: ApiStripeDashboardRoute,
+  ApiStripeOnboardRoute: ApiStripeOnboardRoute,
+  ApiStripeWebhookRoute: ApiStripeWebhookRoute,
 }
 export const routeTree = rootRouteImport
   ._addFileChildren(rootRouteChildren)
